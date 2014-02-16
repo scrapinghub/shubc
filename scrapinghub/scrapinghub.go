@@ -3,6 +3,7 @@ package scrapinghub
 import (
     "fmt"
     "io"
+    "strings"
     "net/http"
     "crypto/tls"
     "encoding/json"
@@ -103,8 +104,18 @@ type Jobs struct {
     Jobs []map[string]interface{}
 }
 
-func (jobs *Jobs) List(conn *Connection, project_id string, count int) (*Jobs, error) {
+func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters []string) (*Jobs, error) {
     method := fmt.Sprintf("/jobs/list.json?project=%s&count=%d", project_id, count)
+    mfilters := make(map[string]string)
+    for _, f := range(filters) {
+        if strings.Index(f, "=") > 0 {
+            res := strings.Split(f, "=")
+            mfilters[res[0]] = res[1]
+        }
+    }
+    for fname, fval := range(mfilters) {
+        method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
+    }
     content, err := conn.do_request(baseUrl + method)
     if err != nil {
         return nil, err

@@ -54,7 +54,8 @@ func main() {
                 }
             } else if cmd == "jobs" {
                 var jobs scrapinghub.Jobs
-                jobs_list, err := jobs.List(&conn, flag.Arg(1), *count)
+                filters := flag.Args()[2:]
+                jobs_list, err := jobs.List(&conn, flag.Arg(1), *count, filters)
 
                 if err != nil {
                     fmt.Println(err)
