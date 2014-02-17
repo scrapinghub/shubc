@@ -34,8 +34,9 @@ func main() {
             fmt.Println("shubc [options] <command> arg1 .. argN")
             fmt.Println()
             fmt.Println(" Commands: ")
-            fmt.Println("   spiders <project_id> - list the spiders on project_id")
-            fmt.Println("   jobs <project_id> - list the last 100 jobs on project_id")
+            fmt.Println("   spiders <project_id>  - list the spiders on project_id")
+            fmt.Println("   jobs <project_id>     - list the last 100 jobs on project_id")
+            fmt.Println("   jobinfo <job_id>      - print information about the job with <job_id>")
 
         } else {
             if cmd == "spiders" {
@@ -69,7 +70,24 @@ func main() {
                         int(j["items_scraped"].(float64)), int(j["errors_count"].(float64)), j["started_time"].(string))
                     }
                 }
+            } else if cmd == "jobinfo" {
+                var jobs scrapinghub.Jobs
+                jobinfo, err := jobs.JobInfo(&conn, flag.Arg(1))
+
+                if err != nil {
+                    fmt.Println(err)
+                    os.Exit(1)
+                } else {
+                    outfmt := "| %-30s | %60s |\n"
+                    fmt.Printf(outfmt, "key", "value")
+                    fmt.Println(dashes(97))
+                    for k, v := range(jobinfo) {
+                        fmt.Printf(outfmt, k, v)
+                    }
+                }
+
             }
+
         }
     }
 }
