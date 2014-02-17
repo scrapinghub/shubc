@@ -122,7 +122,9 @@ func main() {
                         fmt.Printf(outfmt, k, v)
                     }
                 }
-
+            } else {
+                fmt.Printf("'%s' command not found\n", cmd)
+                os.Exit(1)
             }
 
         }
