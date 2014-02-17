@@ -97,9 +97,14 @@ func main() {
                     outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
                     fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "started_time")
                     fmt.Println(dashes(106))
+                    started_time := ""
                     for _, j := range(jobs_list.Jobs) {
-                        fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %20s |\n", j["id"].(string), j["spider"].(string), j["state"].(string), 
-                        int(j["items_scraped"].(float64)), int(j["errors_count"].(float64)), j["started_time"].(string))
+                        jid := j["id"].(string)
+                        if j["started_time"] != nil {
+                           started_time = j["started_time"].(string)
+                        }
+                        fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %20s |\n", jid, j["spider"].(string), j["state"].(string), 
+                            int(j["items_scraped"].(float64)), int(j["errors_count"].(float64)), started_time)
                     }
                 }
             } else if cmd == "jobinfo" {
