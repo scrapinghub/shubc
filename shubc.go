@@ -55,6 +55,10 @@ func main() {
                 }
             } else if cmd == "jobs" {
                 var jobs scrapinghub.Jobs
+                if len(flag.Args()) < 2 {
+                    fmt.Println("Missing argument <project_id>")
+                    os.Exit(1)
+                }
                 filters := flag.Args()[2:]
                 jobs_list, err := jobs.List(&conn, flag.Arg(1), *count, filters)
 
