@@ -2,8 +2,11 @@ package main
 
 import (
     "os"
+    "os/user"
     "fmt"
+    "path"
     "flag"
+    "strings"
     "shubc/scrapinghub"
 )
 
@@ -15,8 +18,30 @@ func dashes(n int) string {
     return s
 }
 
+func find_apikey() string {
+    u, _ := user.Current()
+    scrapy_cfg := path.Join(u.HomeDir, "/.scrapy.cfg")
+    if st, err := os.Stat(scrapy_cfg); err == nil {
+        f, err := os.Open(scrapy_cfg)
+        if err != nil { panic(err) }
+        buf := make([]byte, st.Size())
+        n, err := f.Read(buf)
+        if err != nil { panic(err) }
+        s := string(buf[:n])
+        lines := strings.Split(s, "\n")
+        for _, l := range(lines) {
+            if strings.Index(l, "username") < 0 {
+                continue
+            }
+            result := strings.Split(l, "=")
+            return strings.TrimSpace(result[1])
+        }
+    }
+    return ""
+}
+
 func main() {
-    var apikey = flag.String("apikey", "", "Scrapinghub api key")
+    var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
     var count = flag.Int("count", 100, "Count for those commands that need a count limit")
 
     flag.Parse()
@@ -39,6 +64,9 @@ func main() {
             fmt.Println("   jobinfo <job_id>      - print information about the job with <job_id>")
 
         } else {
+            if *apikey == "" {
+                fmt.Println("No API Key given, neither through the option or in ~/.scrapy.cfg")
+            }
             if cmd == "spiders" {
                 var spiders scrapinghub.Spiders
                 spider_list, err := spiders.List(&conn, flag.Arg(1))
