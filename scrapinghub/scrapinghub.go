@@ -48,28 +48,16 @@ func (conn *Connection) do_request(url string) ([]byte, error) {
         return nil, err
     }
 
-    if resp.ContentLength > 0 {
-        content := make([]byte, resp.ContentLength)
-        nread, err := resp.Body.Read(content)
-        if err != nil {
-            return nil, err
-        }
-        if int64(nread) != resp.ContentLength {
-            return nil, errors.New("Content read is different than the response content length")
-        }
-        return content, nil
-    } else {
-        // Create buffer
-        content := make([]byte, 0)
-        buf := make([]byte, 1024)
-        for {
-            n, err := resp.Body.Read(buf)
-            if err != nil && err != io.EOF { panic(err) }
-            if n == 0 { break }
-            content = append(content, buf[:n]...)
-        }
-        return content, nil
+    // Create buffer
+    content := make([]byte, 0)
+    buf := make([]byte, 1024)
+    for {
+        n, err := resp.Body.Read(buf)
+        if err != nil && err != io.EOF { panic(err) }
+        if n == 0 { break }
+        content = append(content, buf[:n]...)
     }
+    return content, nil
 }
 
 type Spiders struct {
