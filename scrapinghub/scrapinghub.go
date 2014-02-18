@@ -3,7 +3,9 @@ package scrapinghub
 import (
     "fmt"
     "io"
+    "bytes"
     "strings"
+    "net/url"
     "net/http"
     "crypto/tls"
     "encoding/json"
@@ -36,8 +38,17 @@ func (conn *Connection) New (apikey string) {
     conn.client = &http.Client{Transport: tr}
 }
 
-func (conn *Connection) do_request(url string) ([]byte, error) {
-    req, err := http.NewRequest("GET", url, nil)
+func (conn *Connection) do_request(rurl string, method string, params map[string]string) ([]byte, error) {
+    var post_data *bytes.Buffer = nil
+    if method == "POST" {
+        data := url.Values{}
+        for k, v := range(params) {
+            data.Add(k, v)
+        }
+        post_data = bytes.NewBufferString(data.Encode())
+    }
+
+    req, err := http.NewRequest("POST", rurl, post_data)
     if err != nil {
         return nil, err
     }
@@ -58,6 +69,7 @@ func (conn *Connection) do_request(url string) ([]byte, error) {
         content = append(content, buf[:n]...)
     }
     return content, nil
+
 }
 
 type Spiders struct {
@@ -71,7 +83,7 @@ var jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs lis
 
 func (spider *Spiders) List (conn *Connection, project_id string) (*Spiders, error) {
     method := "/spiders/list.json?project=" + project_id
-    content, err := conn.do_request(baseUrl + method)
+    content, err := conn.do_request(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -90,21 +102,31 @@ type Jobs struct {
     Count int
     Total int
     Jobs []map[string]interface{}
+    JobId string
+    Message string
+}
+
+/* 
+  Given a list of ["key=val", "key2=val2", ...] returns its correspdonding map 
+*/
+func equality_list_to_map(data []string) map[string]string {
+    result := make(map[string]string)
+    for _, e := range(data) {
+        if strings.Index(e, "=") > 0 {
+            res := strings.Split(e, "=")
+            result[strings.TrimSpace(res[0])] = strings.TrimSpace(res[1])
+        }
+    }
+    return result
 }
 
 func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters []string) (*Jobs, error) {
     method := fmt.Sprintf("/jobs/list.json?project=%s&count=%d", project_id, count)
-    mfilters := make(map[string]string)
-    for _, f := range(filters) {
-        if strings.Index(f, "=") > 0 {
-            res := strings.Split(f, "=")
-            mfilters[res[0]] = res[1]
-        }
-    }
+    mfilters := equality_list_to_map(filters)
     for fname, fval := range(mfilters) {
         method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
     }
-    content, err := conn.do_request(baseUrl + method)
+    content, err := conn.do_request(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -123,7 +145,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
     project_id := res[0]
 
     method := fmt.Sprintf("/jobs/list.json?project=%s&job=%s", project_id, job_id)
-    content, err := conn.do_request(baseUrl + method)
+    content, err := conn.do_request(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -141,5 +163,28 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
         } else {
             return nil, errors.New(fmt.Sprintf("Jobs.JobInfo: Job %s does not exist", job_id))
         }
+    }
+}
+
+func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args []string) (string, error) {
+    method := "/schedule.json"
+    data := map[string]string {
+        "project": project_id,
+        "spider": spider_name,
+    }
+    params := equality_list_to_map(args)
+    for k, v := range(params) {
+        data[k] = v
+    }
+    content, err := conn.do_request(baseUrl + method, "POST", data)
+    if err != nil {
+        return "", err
+    }
+    json.Unmarshal(content, jobs)
+
+    if jobs.Status != "ok" {
+        return "", errors.New(fmt.Sprintf("Jobs.Schedule: Error while scheduling the job. Message: %s", jobs.Message))
+    } else {
+        return jobs.JobId, nil
     }
 }

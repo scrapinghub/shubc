@@ -122,6 +122,18 @@ func main() {
                         fmt.Printf(outfmt, k, v)
                     }
                 }
+            } else if cmd == "schedule" {
+                var jobs scrapinghub.Jobs
+                project_id := flag.Arg(1)
+                spider_name := flag.Arg(2)
+                args := flag.Args()[3:]
+                job_id, err := jobs.Schedule(&conn, project_id, spider_name, args)
+                if err != nil {
+                    fmt.Println(err)
+                    os.Exit(1)
+                } else {
+                    fmt.Printf("Scheduled job: %s\n", job_id)
+                }
             } else {
                 fmt.Printf("'%s' command not found\n", cmd)
                 os.Exit(1)
