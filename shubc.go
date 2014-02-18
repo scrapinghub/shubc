@@ -59,9 +59,10 @@ func main() {
             fmt.Println("shubc [options] <command> arg1 .. argN")
             fmt.Println()
             fmt.Println(" Commands: ")
-            fmt.Println("   spiders <project_id>  - list the spiders on project_id")
-            fmt.Println("   jobs <project_id>     - list the last 100 jobs on project_id")
-            fmt.Println("   jobinfo <job_id>      - print information about the job with <job_id>")
+            fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
+            fmt.Println("   jobs <project_id> [filters]                - list the last 100 jobs on project_id")
+            fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
+            fmt.Println("   schedule <project_id> <spider_name> [args] - print information about the job with <job_id>")
 
         } else {
             if *apikey == "" {
