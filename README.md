@@ -11,9 +11,9 @@ It has the binding in Go for the HTTP API of Scrapy Cloud
 Installation
 ------------
 
-   $ go get github.com/andrix/shubc
-   $ cd shubc
-   $ go install shubc
+    $ go get github.com/andrix/shubc
+    $ cd shubc
+    $ go install shubc
 
 Command line tool
 =================
