@@ -43,6 +43,7 @@ func find_apikey() string {
 func main() {
     var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
     var count = flag.Int("count", 100, "Count for those commands that need a count limit")
+    var offset = flag.Int("offset", 0, "Number of results to skip from the beginning")
 
     flag.Parse()
 
@@ -64,6 +65,7 @@ func main() {
             fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
             fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
             fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
+            fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
 
         } else {
             if *apikey == "" {
@@ -145,6 +147,21 @@ func main() {
                     os.Exit(1)
                 } else {
                     fmt.Printf("Stopped job: %s\n", job_id)
+                }
+            } else if cmd == "items" {
+                job_id := flag.Arg(1)
+                items, err := scrapinghub.RetrieveItems(&conn, job_id, *count, *offset)
+                if err != nil {
+                    fmt.Printf("Error: %s\n", err)
+                    os.Exit(1)
+                } else {
+                    for i, e := range(items) {
+                        fmt.Printf("Item %5d %s\n", i, dashes(129))
+                        for k, v := range(e) {
+                            fmt.Printf("| %-33s | %100s |\n", k, fmt.Sprintf("%v", v))
+                        }
+                        fmt.Println(dashes(140))
+                    }
                 }
             } else {
                 fmt.Printf("'%s' command not found\n", cmd)

@@ -213,3 +213,26 @@ func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
         return nil
     }
 }
+
+func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[string]interface{}, error) {
+    res := strings.Split(job_id, "/")
+    project_id := res[0]
+    method := fmt.Sprintf("/items.json?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
+
+    content, err := conn.do_request(baseUrl + method, "GET", nil)
+    if err != nil {
+        return nil, err
+    }
+    var f interface{}
+    err = json.Unmarshal(content, &f)
+    if err != nil {
+        return nil, err
+    }
+    jarray := f.([]interface{})
+
+    items := make([]map[string]interface{}, len(jarray))
+    for i, e := range(jarray) {
+        items[i] = e.(map[string]interface{})
+    }
+    return items, nil
+}
