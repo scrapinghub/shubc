@@ -191,3 +191,25 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
         return jobs.JobId, nil
     }
 }
+
+func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
+    res := strings.Split(job_id, "/")
+    project_id := res[0]
+    method := "/jobs/stop.json"
+
+    data := map[string]string {
+        "project": project_id,
+        "job": job_id,
+    }
+    content, err := conn.do_request(baseUrl + method, "POST", data)
+    if err != nil {
+        return err
+    }
+    json.Unmarshal(content, jobs)
+
+    if jobs.Status != "ok" {
+        return errors.New(fmt.Sprintf("Jobs.Stop: Error while stopping the job. Message: %s", jobs.Message))
+    } else {
+        return nil
+    }
+}

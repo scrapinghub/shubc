@@ -62,7 +62,8 @@ func main() {
             fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
             fmt.Println("   jobs <project_id> [filters]                - list the last 100 jobs on project_id")
             fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
-            fmt.Println("   schedule <project_id> <spider_name> [args] - print information about the job with <job_id>")
+            fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
+            fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
 
         } else {
             if *apikey == "" {
@@ -134,6 +135,16 @@ func main() {
                     os.Exit(1)
                 } else {
                     fmt.Printf("Scheduled job: %s\n", job_id)
+                }
+            } else if cmd == "stop" {
+                var jobs scrapinghub.Jobs
+                job_id := flag.Arg(1)
+                err := jobs.Stop(&conn, job_id)
+                if err != nil {
+                    fmt.Println(err)
+                    os.Exit(1)
+                } else {
+                    fmt.Printf("Stopped job: %s\n", job_id)
                 }
             } else {
                 fmt.Printf("'%s' command not found\n", cmd)

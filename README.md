@@ -23,7 +23,8 @@ Getting help
        spiders <project_id>                       - list the spiders on project_id
        jobs <project_id> [filters]                - list the last 100 jobs on project_id
        jobinfo <job_id>                           - print information about the job with <job_id>
-       schedule <project_id> <spider_name> [args] - print information about the job with <job_id>
+       schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>
+       stop <job_id>                              - stop the job with <job_id>
        ...
  
 Available Commands
@@ -32,5 +33,6 @@ Available Commands
 * spiders <project_id> : list the spiders on project_id
 * jobs <project_id> [filters] : list the last 100 jobs on project_id (accept -count parameter). Filters are in the form: state=running, spider=spider1, etc
 * jobinfo <job_id> : print information about the job with <job_id>
-* schedule <project_id> <spider_name> [args] : print information about the job with <job_id>
+* schedule <project_id> <spider_name> [args] : schedule the spider <spider_name> with [args] in project <project_id>
+* stop <job_id> : stop the job with <job_id>
 
