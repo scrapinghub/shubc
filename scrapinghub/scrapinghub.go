@@ -39,16 +39,19 @@ func (conn *Connection) New (apikey string) {
 }
 
 func (conn *Connection) do_request(rurl string, method string, params map[string]string) ([]byte, error) {
-    var post_data *bytes.Buffer = nil
-    if method == "POST" {
+    var req *http.Request
+    var err error
+
+    if method == "GET" {
+        req, err = http.NewRequest("GET", rurl, nil)
+    } else if method == "POST" {
         data := url.Values{}
         for k, v := range(params) {
             data.Add(k, v)
         }
-        post_data = bytes.NewBufferString(data.Encode())
+        req, err = http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
     }
 
-    req, err := http.NewRequest("POST", rurl, post_data)
     if err != nil {
         return nil, err
     }
