@@ -3,13 +3,17 @@ shubc
 
 Go bindings for Scrapinghub HTTP API and a command line tool.
 
-*Note it's a WIP*
-
 scrapinghub package
 ===================
 
-[__draft__] It has the binding in Go for the HTTP API of Scrapy Cloud
+It has the binding in Go for the HTTP API of Scrapy Cloud
 
+Installation
+------------
+
+   $ go get github.com/andrix/shubc
+   $ cd shubc
+   $ go install shubc
 
 Command line tool
 =================
