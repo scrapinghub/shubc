@@ -95,9 +95,8 @@ func (spider *Spiders) List (conn *Connection, project_id string) (*Spiders, err
 
     if spider.Status != "ok" {
         return nil, spider_list_error
-    } else {
-        return spider, nil
     }
+    return spider, nil
 }
 
 type Jobs struct {
@@ -138,9 +137,8 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters [
 
     if jobs.Status != "ok" {
         return nil, jobs_list_error
-    } else {
-        return jobs, nil
     }
+    return jobs, nil
 }
 
 func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, error) {
@@ -156,17 +154,16 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
 
     if jobs.Status != "ok" {
         return nil, errors.New("Jobs.JobInfo: Error while retrieving job info")
-    } else {
-        if len(jobs.Jobs) > 0 {
-            m := make(map[string]string)
-            for k, v := range(jobs.Jobs[0]) {
-                m[k] = fmt.Sprintf("%v", v)
-            }
-            return m, nil
-        } else {
-            return nil, errors.New(fmt.Sprintf("Jobs.JobInfo: Job %s does not exist", job_id))
-        }
     }
+    if len(jobs.Jobs) <= 0 {
+        return nil, errors.New(fmt.Sprintf("Jobs.JobInfo: Job %s does not exist", job_id))
+    }
+
+    m := make(map[string]string)
+    for k, v := range(jobs.Jobs[0]) {
+        m[k] = fmt.Sprintf("%v", v)
+    }
+    return m, nil
 }
 
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args []string) (string, error) {
@@ -187,9 +184,8 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 
     if jobs.Status != "ok" {
         return "", errors.New(fmt.Sprintf("Jobs.Schedule: Error while scheduling the job. Message: %s", jobs.Message))
-    } else {
-        return jobs.JobId, nil
     }
+    return jobs.JobId, nil
 }
 
 func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
@@ -209,9 +205,8 @@ func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
 
     if jobs.Status != "ok" {
         return errors.New(fmt.Sprintf("Jobs.Stop: Error while stopping the job. Message: %s", jobs.Message))
-    } else {
-        return nil
     }
+    return nil
 }
 
 func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[string]interface{}, error) {
