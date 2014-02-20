@@ -7,7 +7,7 @@ import (
     "path"
     "flag"
     "strings"
-    "shubc/scrapinghub"
+    "github.com/andrix/shubc/scrapinghub"
 )
 
 func dashes(n int) string {
