@@ -39,10 +39,11 @@ Getting help
 Available Commands
 ------------------
 
-* spiders <project_id> : list the spiders on project_id
-* jobs <project_id> [filters] : list the last 100 jobs on project_id (accept -count parameter). Filters are in the form: state=running, spider=spider1, etc
-* jobinfo <job_id> : print information about the job with <job_id>
-* schedule <project_id> <spider_name> [args] : schedule the spider <spider_name> with [args] in project <project_id>
-* stop <job_id> : stop the job with <job_id>
-* items <job_id> : print to stdout the items for <job_id> (count & offset available)
-* project-slybot <project_id> [spiders]: download the zip and write it to Stdout or o.zip if -o option is given")
+* spiders &lt;project-id&gt; : list the spiders on project-id
+* jobs &lt;project-id&gt; [filters] : list the last 100 jobs on project-id (accept -count parameter). Filters are in the form: state=running, spider=spider1, etc
+* jobinfo &lt;job-id&gt; : print information about the job with &lt;job-id&gt;
+* schedule &lt;project-id&gt; &lt;spider-name&gt; [args] : schedule the spider &lt;spider-name&gt; with [args] in project &lt;project-id&gt;
+* stop &lt;job-id&gt; : stop the job with &lt;job-id&gt;
+* items &lt;job-id&gt; : print to stdout the items for &lt;job-id&gt; (count & offset available)
+* project-slybot &lt;project-id&gt; [spiders]: download the zip and write it to Stdout or o.zip if -o option is given
+
