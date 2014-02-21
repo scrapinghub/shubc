@@ -2,6 +2,7 @@ package scrapinghub
 
 import (
     "fmt"
+    "os"
     "io"
     "bytes"
     "strings"
@@ -38,7 +39,7 @@ func (conn *Connection) New (apikey string) {
     conn.client = &http.Client{Transport: tr}
 }
 
-func (conn *Connection) do_request(rurl string, method string, params map[string]string) ([]byte, error) {
+func (conn *Connection) do_request_content(rurl string, method string, params map[string]string) ([]byte, error) {
     var req *http.Request
     var err error
 
@@ -75,6 +76,29 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 
 }
 
+func (conn *Connection) do_request(rurl string, method string, params map[string]string) (*http.Response, error) {
+    var req *http.Request
+    var err error
+
+    if method == "GET" {
+        req, err = http.NewRequest("GET", rurl, nil)
+    } else if method == "POST" {
+        data := url.Values{}
+        for k, v := range(params) {
+            data.Add(k, v)
+        }
+        req, err = http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
+    }
+
+    if err != nil {
+        return nil, err
+    }
+    // Set Scrapinghub api key to request
+    req.SetBasicAuth(conn.apikey, "")
+    return conn.client.Do(req)
+}
+
+
 type Spiders struct {
     Spiders []map[string]string
     Status string
@@ -86,7 +110,7 @@ var jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs lis
 
 func (spider *Spiders) List (conn *Connection, project_id string) (*Spiders, error) {
     method := "/spiders/list.json?project=" + project_id
-    content, err := conn.do_request(baseUrl + method, "GET", nil)
+    content, err := conn.do_request_content(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -128,7 +152,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters [
     for fname, fval := range(mfilters) {
         method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
     }
-    content, err := conn.do_request(baseUrl + method, "GET", nil)
+    content, err := conn.do_request_content(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -146,7 +170,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
     project_id := res[0]
 
     method := fmt.Sprintf("/jobs/list.json?project=%s&job=%s", project_id, job_id)
-    content, err := conn.do_request(baseUrl + method, "GET", nil)
+    content, err := conn.do_request_content(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -176,7 +200,7 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
     for k, v := range(params) {
         data[k] = v
     }
-    content, err := conn.do_request(baseUrl + method, "POST", data)
+    content, err := conn.do_request_content(baseUrl + method, "POST", data)
     if err != nil {
         return "", err
     }
@@ -197,7 +221,7 @@ func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
         "project": project_id,
         "job": job_id,
     }
-    content, err := conn.do_request(baseUrl + method, "POST", data)
+    content, err := conn.do_request_content(baseUrl + method, "POST", data)
     if err != nil {
         return err
     }
@@ -214,7 +238,7 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
     project_id := res[0]
     method := fmt.Sprintf("/items.json?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
-    content, err := conn.do_request(baseUrl + method, "GET", nil)
+    content, err := conn.do_request_content(baseUrl + method, "GET", nil)
     if err != nil {
         return nil, err
     }
@@ -231,3 +255,34 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
     }
     return items, nil
 }
+
+
+func  RetrieveSlybotProject(conn *Connection, project_id string, spiders []string, out *os.File) error {
+    method := fmt.Sprintf("/as/project-slybot.zip?project=%s", project_id)
+    for _, spider := range(spiders) {
+        method = method + fmt.Sprintf("&spider=%s", spider)
+    }
+
+    resp, err := conn.do_request(baseUrl + method, "GET", nil)
+    if err != nil {
+        return err
+    }
+
+    defer resp.Body.Close()
+
+    // Create buffer
+    buf := make([]byte, 1024)
+
+    for {
+        n, err := resp.Body.Read(buf)
+        if err != nil && err != io.EOF { return err }
+        if n == 0 { break }
+
+        if _, err := out.Write(buf[:n]); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
+

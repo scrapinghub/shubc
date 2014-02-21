@@ -45,4 +45,4 @@ Available Commands
 * schedule <project_id> <spider_name> [args] : schedule the spider <spider_name> with [args] in project <project_id>
 * stop <job_id> : stop the job with <job_id>
 * items <job_id> : print to stdout the items for <job_id> (count & offset available)
-
+* project-slybot <project_id> [spiders]: download the zip and write it to Stdout or o.zip if -o option is given")

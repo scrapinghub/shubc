@@ -44,6 +44,7 @@ func main() {
     var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
     var count = flag.Int("count", 100, "Count for those commands that need a count limit")
     var offset = flag.Int("offset", 0, "Number of results to skip from the beginning")
+    var output = flag.String("o", "", "Write output to a file instead of Stdout")
 
     flag.Parse()
 
@@ -66,6 +67,7 @@ func main() {
             fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
             fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
             fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
+            fmt.Println("   project-slybot <project_id> [spiders] - download the zip and write it to Stdout or o.zip if -o option is given")
 
         } else {
             if *apikey == "" {
@@ -162,6 +164,31 @@ func main() {
                         }
                         fmt.Println(dashes(140))
                     }
+                }
+            } else if cmd == "project-slybot" {
+                project_id := flag.Arg(1)
+                spiders := flag.Args()[2:]
+
+                var out *os.File = os.Stdout
+                var err error
+                if *output != "" {
+                    out, err = os.Create(*output)
+                    if err != nil {
+                        fmt.Printf("Error writing to file: %s\n", err)
+                        os.Exit(1)
+                    }
+                }
+                defer func() {
+                    if err := out.Close(); err != nil {
+                        panic(err)
+                    }
+                }()
+
+                err = scrapinghub.RetrieveSlybotProject(&conn, project_id, spiders, out)
+
+                if err != nil {
+                    fmt.Printf("Error: %s\n", err)
+                    os.Exit(1)
                 }
             } else {
                 fmt.Printf("'%s' command not found\n", cmd)
