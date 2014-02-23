@@ -65,6 +65,9 @@ func main() {
 		if cmd == "help" {
 			fmt.Println("shubc [options] <command> arg1 .. argN")
 			fmt.Println()
+			fmt.Println(" Options: ")
+			flag.PrintDefaults()
+			fmt.Println()
 			fmt.Println(" Commands: ")
 			fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
 			fmt.Println("   jobs <project_id> [filters]                - list the last 100 jobs on project_id")
@@ -72,7 +75,8 @@ func main() {
 			fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
 			fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
 			fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
-			fmt.Println("   project-slybot <project_id> [spiders] - download the zip and write it to Stdout or o.zip if -o option is given")
+			fmt.Println("   project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
+			fmt.Println("   log <job_id>                               - print to stdout the log for the job `job_id` (count & offset available)")
 
 		} else {
 			if *apikey == "" {
