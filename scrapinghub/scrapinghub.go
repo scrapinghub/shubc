@@ -11,6 +11,7 @@ import (
     "crypto/tls"
     "encoding/json"
     "errors"
+    "bufio"
 )
 
 // Scrapinghub Base API URL
@@ -285,4 +286,45 @@ func  RetrieveSlybotProject(conn *Connection, project_id string, spiders []strin
     return nil
 }
 
+func retrieveJsonLines(conn *Connection, method string) (<-chan string, error) {
+    resp, err := conn.do_request(baseUrl + method, "GET", nil)
+    if err != nil {
+        return nil, err
+    }
+    ch := make(chan string)
 
+    go func() {
+        scanner := bufio.NewScanner(resp.Body)
+        for scanner.Scan() {
+            ch <- scanner.Text()
+        }
+        close(ch)
+    } ()
+    return ch, nil
+}
+
+//  Given a job_id, returns a channel of strings where each element is a line of 
+//  the JsonLines returned by the API items.jl endpoint.
+func RetrieveItemsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
+    res := strings.Split(job_id, "/")
+    project_id := res[0]
+    method := fmt.Sprintf("/items.jl?project=%s&job=%s", project_id, job_id)
+
+    return retrieveJsonLines(conn, method)
+}
+
+// Returns a channel of strings where each element is a line of the JsonLines
+// returned by the API items.jl endpoint.
+// Params
+// - project_id: Scrapinghub project id 
+// - count: number of results to return
+// - filters: a list of string of the type key=value to apply to the result (see http://doc.scrapinghub.com/api.html#jobs-list-json)
+func RetrieveJobsJsonLines(conn *Connection, project_id string, count int, filters []string) (<-chan string, error) {
+    method := fmt.Sprintf("/jobs/list.jl?project=%s&count=%d", project_id, count)
+    mfilters := equality_list_to_map(filters)
+    for fname, fval := range(mfilters) {
+        method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
+    }
+
+    return retrieveJsonLines(conn, method)
+}

@@ -45,6 +45,7 @@ func main() {
     var count = flag.Int("count", 100, "Count for those commands that need a count limit")
     var offset = flag.Int("offset", 0, "Number of results to skip from the beginning")
     var output = flag.String("o", "", "Write output to a file instead of Stdout")
+    var raw = flag.Bool("raw", false, "If given, for command items and jobs will retrieve all the data writing to os.Stdout as raw format")
 
     flag.Parse()
 
@@ -88,18 +89,29 @@ func main() {
                     }
                 }
             } else if cmd == "jobs" {
-                var jobs scrapinghub.Jobs
+                project_id := flag.Arg(1)
                 if len(flag.Args()) < 2 {
                     fmt.Println("Missing argument <project_id>")
                     os.Exit(1)
                 }
                 filters := flag.Args()[2:]
-                jobs_list, err := jobs.List(&conn, flag.Arg(1), *count, filters)
-
-                if err != nil {
-                    fmt.Println(err)
-                    os.Exit(1)
+                if *raw {
+                    ch_jobs, err := scrapinghub.RetrieveJobsJsonLines(&conn, project_id, *count, filters)
+                    if err != nil {
+                        fmt.Println(err)
+                        os.Exit(1)
+                    }
+                    for line := range ch_jobs {
+                        fmt.Println(line)
+                    }
                 } else {
+                    var jobs scrapinghub.Jobs
+                    jobs_list, err := jobs.List(&conn, project_id, *count, filters)
+
+                    if err != nil {
+                        fmt.Println(err)
+                        os.Exit(1)
+                    }
                     outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
                     fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "started_time")
                     fmt.Println(dashes(106))
@@ -152,11 +164,21 @@ func main() {
                 }
             } else if cmd == "items" {
                 job_id := flag.Arg(1)
-                items, err := scrapinghub.RetrieveItems(&conn, job_id, *count, *offset)
-                if err != nil {
-                    fmt.Printf("Error: %s\n", err)
-                    os.Exit(1)
+                if *raw {
+                    ch_lines, err := scrapinghub.RetrieveItemsJsonLines(&conn, job_id)
+                    if err != nil {
+                        fmt.Printf("Error: %s\n", err)
+                        os.Exit(1)
+                    }
+                    for line := range ch_lines {
+                        fmt.Println(line)
+                    }
                 } else {
+                    items, err := scrapinghub.RetrieveItems(&conn, job_id, *count, *offset)
+                    if err != nil {
+                        fmt.Printf("Error: %s\n", err)
+                        os.Exit(1)
+                    } 
                     for i, e := range(items) {
                         fmt.Printf("Item %5d %s\n", i, dashes(129))
                         for k, v := range(e) {
