@@ -35,11 +35,11 @@ Getting help
  
 ### Available Commands
 
-* spiders &lt;project-id&gt; : list the spiders on `project-id`
-* jobs &lt;project-id&gt; [filters] : list the last 100 jobs on `project-id` (accept `-count` parameter). Filters are in the form: `state=running`, `spider=spider1`, etc. If `-raw` option is given output the jobs as JsonLines to Stdout.
-* jobinfo &lt;job-id&gt; : print information about the job with `job-id`;
-* schedule &lt;project-id&gt; &lt;spider-name&gt; [args] : schedule the spider `spider-name` with `args` in project `project-id`
-* stop &lt;job-id&gt; : stop the job with `job-id`
-* items &lt;job-id&gt; : print to stdout the items for `job-id` (`count` & `offset` available). If `-raw` option is given output the jobs as JsonLines to Stdout.
-* project-slybot &lt;project-id&gt; [spiders]: download the zip and write it to Stdout or o.zip if `-o` option is given
-* log &lt;job-id&gt;: print to Stdout the log for job `job-id`
+* `spiders <project-id>`: list the spiders on `project-id`
+* `jobs <project-id> [filters]`: list the last 100 jobs on `project-id` (accept `-count` parameter). Filters are in the form: `state=running`, `spider=spider1`, etc. If `-raw` option is given output the jobs as JsonLines to Stdout.
+* `jobinfo <job-id>`: print information about the job with `job-id`;
+* `schedule <project-id> <spider-name> [args]`: schedule the spider `spider-name` with `args` in project `project-id`
+* `stop <job-id>`: stop the job with `job-id`
+* `items <job-id>`: print to stdout the items for `job-id` (`count` & `offset` available). If `-raw` option is given output the jobs as JsonLines to Stdout.
+* `project-slybot <project-id> [spiders]`: download the zip and write it to Stdout or o.zip if `-o` option is given
+* `log <job-id>`: print to Stdout the log for job `job-id`
