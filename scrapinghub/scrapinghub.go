@@ -1,3 +1,4 @@
+// Go bindings for Scrapinghub API (http://doc.scrapinghub.com/api.html)
 package scrapinghub
 
 import (
@@ -11,25 +12,23 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 )
 
 // Scrapinghub Base API URL
 var baseUrl = "https://dash.scrapinghub.com/api"
+var re_jobid = regexp.MustCompile(`(?P<project_id>\d+)/\d+/\d+`)
 
 type Connection struct {
 	client *http.Client
 	apikey string
 }
 
+// Create a new connection to Scrapinghub API
 func (conn *Connection) New(apikey string) {
 	// Create TLS config
 	tlsConfig := tls.Config{RootCAs: nil}
-
-	// If insecure, skip CA verfication
-	//if insecure {
-	//    tlsConfig.InsecureSkipVerify = true
-	//}
 
 	tr := &http.Transport{
 		TLSClientConfig:    &tlsConfig,
@@ -40,6 +39,8 @@ func (conn *Connection) New(apikey string) {
 	conn.client = &http.Client{Transport: tr}
 }
 
+// Do a HTTP request, using method `method` and return the response body in content
+// Argument `params` is a map with the POST parameters, in case method = POST.
 func (conn *Connection) do_request_content(rurl string, method string, params map[string]string) ([]byte, error) {
 	var req *http.Request
 	var err error
@@ -81,6 +82,8 @@ func (conn *Connection) do_request_content(rurl string, method string, params ma
 
 }
 
+// Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
+// Argument `params` is a map with the POST parameters, in case method = POST.
 func (conn *Connection) do_request(rurl string, method string, params map[string]string) (*http.Response, error) {
 	var req *http.Request
 	var err error
@@ -111,6 +114,7 @@ type Spiders struct {
 // errors
 var spider_list_error = errors.New("Spiders.List: Error while retrieving the spider list")
 var jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs list")
+var wrong_job_id_error = errors.New("Job ID is empty or not in the right format (e.g: 123/1/2)")
 
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	method := "/spiders/list.json?project=" + project_id
@@ -136,9 +140,7 @@ type Jobs struct {
 	Message string
 }
 
-/*
-  Given a list of ["key=val", "key2=val2", ...] returns its correspdonding map
-*/
+// Returns a map given a list of ["key=value", ...] strings
 func equality_list_to_map(data []string) map[string]string {
 	result := make(map[string]string)
 	for _, e := range data {
@@ -150,6 +152,8 @@ func equality_list_to_map(data []string) map[string]string {
 	return result
 }
 
+// Returns the list of Jobs for project_id limited by count and those which
+// match the filters
 func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters []string) (*Jobs, error) {
 	method := fmt.Sprintf("/jobs/list.json?project=%s&count=%d", project_id, count)
 	mfilters := equality_list_to_map(filters)
@@ -169,9 +173,13 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters [
 	return jobs, nil
 }
 
+// Returns the job information in map object given the job_id
 func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, error) {
-	res := strings.Split(job_id, "/")
-	project_id := res[0]
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return nil, wrong_job_id_error
+	}
+	project_id := result[1]
 
 	method := fmt.Sprintf("/jobs/list.json?project=%s&job=%s", project_id, job_id)
 	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
@@ -194,6 +202,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
 	return m, nil
 }
 
+// Schedule the spider with name `spider_name` and arguments `args` on `project_id`.
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args []string) (string, error) {
 	method := "/schedule.json"
 	data := map[string]string{
@@ -216,9 +225,14 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	return jobs.JobId, nil
 }
 
+// Stop the job with `job_id`.
 func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
-	res := strings.Split(job_id, "/")
-	project_id := res[0]
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return wrong_job_id_error
+	}
+	project_id := result[1]
+
 	method := "/jobs/stop.json"
 
 	data := map[string]string{
@@ -237,9 +251,15 @@ func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
 	return nil
 }
 
+// Returns up to `count` items for the job `job_id`, starting at `offset`. Each
+// item is returned as a map with string key but value of type `interface{}`
 func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[string]interface{}, error) {
-	res := strings.Split(job_id, "/")
-	project_id := res[0]
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return nil, wrong_job_id_error
+	}
+	project_id := result[1]
+
 	method := fmt.Sprintf("/items.json?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
 	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
@@ -260,6 +280,8 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 	return items, nil
 }
 
+// Download the slybot project for the project `project_id` and the spiders given.
+// The method write the zip file to `out` argument.
 func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string, out *os.File) error {
 	method := fmt.Sprintf("/as/project-slybot.zip?project=%s", project_id)
 	for _, spider := range spiders {
@@ -292,7 +314,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 	return nil
 }
 
-func retrieveJsonLines(conn *Connection, method string) (<-chan string, error) {
+func retrieveLinesStream(conn *Connection, method string) (<-chan string, error) {
 	resp, err := conn.do_request(baseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
@@ -312,19 +334,19 @@ func retrieveJsonLines(conn *Connection, method string) (<-chan string, error) {
 //  Given a job_id, returns a channel of strings where each element is a line of
 //  the JsonLines returned by the API items.jl endpoint.
 func RetrieveItemsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
-	res := strings.Split(job_id, "/")
-	project_id := res[0]
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return nil, wrong_job_id_error
+	}
+	project_id := result[1]
 	method := fmt.Sprintf("/items.jl?project=%s&job=%s", project_id, job_id)
 
-	return retrieveJsonLines(conn, method)
+	return retrieveLinesStream(conn, method)
 }
 
-// Returns a channel of strings where each element is a line of the JsonLines
-// returned by the API items.jl endpoint.
-// Params
-// - project_id: Scrapinghub project id
-// - count: number of results to return
-// - filters: a list of string of the type key=value to apply to the result (see http://doc.scrapinghub.com/api.html#jobs-list-json)
+// Returns a channel of strings which each element is a JSON serialized job for
+// the project `project_id`. `count` and filters (a list of string of the type
+// key=value to apply to the result (see http://doc.scrapinghub.com/api.html#jobs-list-json)
 func RetrieveJobsJsonLines(conn *Connection, project_id string, count int, filters []string) (<-chan string, error) {
 	method := fmt.Sprintf("/jobs/list.jl?project=%s&count=%d", project_id, count)
 	mfilters := equality_list_to_map(filters)
@@ -332,5 +354,18 @@ func RetrieveJobsJsonLines(conn *Connection, project_id string, count int, filte
 		method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
 	}
 
-	return retrieveJsonLines(conn, method)
+	return retrieveLinesStream(conn, method)
+}
+
+// Returns a channel of strings which each element is a line of the log for job with `job_id`
+// Count and offset parameters are accepted to paginate results.
+func LogLines(conn *Connection, job_id string, count, offset int) (<-chan string, error) {
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return nil, wrong_job_id_error
+	}
+	project_id := result[1]
+	method := fmt.Sprintf("/log.txt?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
+
+	return retrieveLinesStream(conn, method)
 }

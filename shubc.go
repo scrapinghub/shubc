@@ -216,6 +216,16 @@ func main() {
 					fmt.Printf("Error: %s\n", err)
 					os.Exit(1)
 				}
+			} else if cmd == "log" {
+				job_id := flag.Arg(1)
+				ch_lines, err := scrapinghub.LogLines(&conn, job_id, *count, *offset)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					os.Exit(1)
+				}
+				for line := range ch_lines {
+					fmt.Println(line)
+				}
 			} else {
 				fmt.Printf("'%s' command not found\n", cmd)
 				os.Exit(1)
