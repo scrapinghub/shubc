@@ -49,7 +49,7 @@ func main() {
 	var count = flag.Int("count", 100, "Count for those commands that need a count limit")
 	var offset = flag.Int("offset", 0, "Number of results to skip from the beginning")
 	var output = flag.String("o", "", "Write output to a file instead of Stdout")
-	var raw = flag.Bool("raw", false, "If given, for command items and jobs will retrieve all the data writing to os.Stdout as raw format")
+	var jsonlines = flag.Bool("jl", false, "If given, for command items and jobs will retrieve all the data writing to os.Stdout as JsonLines format")
 
 	flag.Parse()
 
@@ -103,8 +103,8 @@ func main() {
 					os.Exit(1)
 				}
 				filters := flag.Args()[2:]
-				if *raw {
-					ch_jobs, err := scrapinghub.RetrieveJobsJsonLines(&conn, project_id, *count, filters)
+				if *jsonlines {
+					ch_jobs, err := scrapinghub.JobsAsJsonLines(&conn, project_id, *count, filters)
 					if err != nil {
 						fmt.Println(err)
 						os.Exit(1)
@@ -172,8 +172,8 @@ func main() {
 				}
 			} else if cmd == "items" {
 				job_id := flag.Arg(1)
-				if *raw {
-					ch_lines, err := scrapinghub.RetrieveItemsJsonLines(&conn, job_id)
+				if *jsonlines {
+					ch_lines, err := scrapinghub.ItemsAsJsonLines(&conn, job_id)
 					if err != nil {
 						fmt.Printf("Error: %s\n", err)
 						os.Exit(1)
