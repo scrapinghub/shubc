@@ -333,7 +333,7 @@ func retrieveLinesStream(conn *Connection, method string) (<-chan string, error)
 
 //  Given a job_id, returns a channel of strings where each element is a line of
 //  the JsonLines returned by the API items.jl endpoint.
-func RetrieveItemsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
+func ItemsAsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
 	result := re_jobid.FindStringSubmatch(job_id)
 	if len(result) == 0 {
 		return nil, wrong_job_id_error
@@ -347,7 +347,7 @@ func RetrieveItemsJsonLines(conn *Connection, job_id string) (<-chan string, err
 // Returns a channel of strings which each element is a JSON serialized job for
 // the project `project_id`. `count` and filters (a list of string of the type
 // key=value to apply to the result (see http://doc.scrapinghub.com/api.html#jobs-list-json)
-func RetrieveJobsJsonLines(conn *Connection, project_id string, count int, filters []string) (<-chan string, error) {
+func JobsAsJsonLines(conn *Connection, project_id string, count int, filters []string) (<-chan string, error) {
 	method := fmt.Sprintf("/jobs/list.jl?project=%s&count=%d", project_id, count)
 	mfilters := equality_list_to_map(filters)
 	for fname, fval := range mfilters {
