@@ -29,64 +29,18 @@ type Connection struct {
 func (conn *Connection) New(apikey string) {
 	// Create TLS config
 	tlsConfig := tls.Config{RootCAs: nil}
-
 	tr := &http.Transport{
 		TLSClientConfig:    &tlsConfig,
 		DisableCompression: true,
 	}
-
 	conn.apikey = apikey
 	conn.client = &http.Client{Transport: tr}
 }
 
-// Do a HTTP request, using method `method` and return the response body in content
-// Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request_content(rurl string, method string, params map[string]string) ([]byte, error) {
-	var req *http.Request
-	var err error
-
-	if method == "GET" {
-		req, err = http.NewRequest("GET", rurl, nil)
-	} else if method == "POST" {
-		data := url.Values{}
-		for k, v := range params {
-			data.Add(k, v)
-		}
-		req, err = http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	// Set Scrapinghub api key to request
-	req.SetBasicAuth(conn.apikey, "")
-	resp, err := conn.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create buffer
-	content := make([]byte, 0)
-	buf := make([]byte, 1024)
-	for {
-		n, err := resp.Body.Read(buf)
-		if err != nil && err != io.EOF {
-			panic(err)
-		}
-		if n == 0 {
-			break
-		}
-		content = append(content, buf[:n]...)
-	}
-	return content, nil
-
-}
-
 // Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
 // Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request(rurl string, method string, params map[string]string) (*http.Response, error) {
+func (conn *Connection) do_request(rurl string, method string, params map[string]string) (*http.Response, err error) {
 	var req *http.Request
-	var err error
 
 	if method == "GET" {
 		req, err = http.NewRequest("GET", rurl, nil)
@@ -106,15 +60,38 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 	return conn.client.Do(req)
 }
 
+// Do a HTTP request, using method `method` and return the response body in content
+// Argument `params` is a map with the POST parameters, in case method = POST.
+func (conn *Connection) do_request_content(rurl string, method string, params map[string]string) ([]byte, error) {
+	resp, err := conn.do_request(rurl, method, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create buffer
+	content := make([]byte, 0)
+	buf := make([]byte, 1024)
+	for {
+		n, err := resp.Body.Read(buf)
+		if err != nil && err != io.EOF { panic(err) }
+		if n == 0 { break }
+		content = append(content, buf[:n]...)
+	}
+	return content, nil
+}
+
+
 type Spiders struct {
 	Spiders []map[string]string
 	Status  string
 }
 
 // errors
-var spider_list_error = errors.New("Spiders.List: Error while retrieving the spider list")
-var jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs list")
-var wrong_job_id_error = errors.New("Job ID is empty or not in the right format (e.g: 123/1/2)")
+var (
+    spider_list_error = errors.New("Spiders.List: Error while retrieving the spider list")
+    jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs list")
+    wrong_job_id_error = errors.New("Job ID is empty or not in the right format (e.g: 123/1/2)")
+)
 
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	method := "/spiders/list.json?project=" + project_id
