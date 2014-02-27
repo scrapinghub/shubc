@@ -32,7 +32,11 @@ Getting help
        schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>
        stop <job_id>                              - stop the job with <job_id>
        ...
- 
+
+### Configure your APIKEY
+
+You can configure your APIKEY using the .scrapy.cfg file in your home. You can get more information on how to configure it here: http://doc.scrapinghub.com/scrapy-cloud.html#deploying-your-scrapy-spider
+
 ### Available Commands
 
 * `delete <job-id>`: delete the job with `job- id`
