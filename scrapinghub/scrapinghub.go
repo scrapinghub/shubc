@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strings"
 )
 
 // Scrapinghub Base API URL
@@ -39,7 +38,7 @@ func (conn *Connection) New(apikey string) {
 
 // Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
 // Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request(rurl string, method string, params map[string]string) (*http.Response, err error) {
+func (conn *Connection) do_request(rurl string, method string, params map[string]string) (resp *http.Response, err error) {
 	var req *http.Request
 
 	if method == "GET" {
@@ -73,13 +72,16 @@ func (conn *Connection) do_request_content(rurl string, method string, params ma
 	buf := make([]byte, 1024)
 	for {
 		n, err := resp.Body.Read(buf)
-		if err != nil && err != io.EOF { panic(err) }
-		if n == 0 { break }
+		if err != nil && err != io.EOF {
+			panic(err)
+		}
+		if n == 0 {
+			break
+		}
 		content = append(content, buf[:n]...)
 	}
 	return content, nil
 }
-
 
 type Spiders struct {
 	Spiders []map[string]string
@@ -88,9 +90,9 @@ type Spiders struct {
 
 // errors
 var (
-    spider_list_error = errors.New("Spiders.List: Error while retrieving the spider list")
-    jobs_list_error = errors.New("Jobs.List: Error while retrieving the jobs list")
-    wrong_job_id_error = errors.New("Job ID is empty or not in the right format (e.g: 123/1/2)")
+	spider_list_error  = errors.New("Spiders.List: Error while retrieving the spider list")
+	jobs_list_error    = errors.New("Jobs.List: Error while retrieving the jobs list")
+	wrong_job_id_error = errors.New("Job ID is empty or not in the right format (e.g: 123/1/2)")
 )
 
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
@@ -117,24 +119,11 @@ type Jobs struct {
 	Message string
 }
 
-// Returns a map given a list of ["key=value", ...] strings
-func equality_list_to_map(data []string) map[string]string {
-	result := make(map[string]string)
-	for _, e := range data {
-		if strings.Index(e, "=") > 0 {
-			res := strings.Split(e, "=")
-			result[strings.TrimSpace(res[0])] = strings.TrimSpace(res[1])
-		}
-	}
-	return result
-}
-
 // Returns the list of Jobs for project_id limited by count and those which
 // match the filters
-func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters []string) (*Jobs, error) {
+func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters map[string]string) (*Jobs, error) {
 	method := fmt.Sprintf("/jobs/list.json?project=%s&count=%d", project_id, count)
-	mfilters := equality_list_to_map(filters)
-	for fname, fval := range mfilters {
+	for fname, fval := range filters {
 		method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
 	}
 	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
@@ -180,15 +169,16 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
 }
 
 // Schedule the spider with name `spider_name` and arguments `args` on `project_id`.
-func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args []string) (string, error) {
+func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args map[string]string) (string, error) {
 	method := "/schedule.json"
 	data := map[string]string{
 		"project": project_id,
 		"spider":  spider_name,
 	}
-	params := equality_list_to_map(args)
-	for k, v := range params {
-		data[k] = v
+	for k, v := range args {
+		if k != "project" && k != "spider" {
+			data[k] = v
+		}
 	}
 	content, err := conn.do_request_content(baseUrl+method, "POST", data)
 	if err != nil {
@@ -202,30 +192,49 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	return jobs.JobId, nil
 }
 
-// Stop the job with `job_id`.
-func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
+func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, error_string string, update_data map[string]string) error {
 	result := re_jobid.FindStringSubmatch(job_id)
 	if len(result) == 0 {
 		return wrong_job_id_error
 	}
 	project_id := result[1]
 
-	method := "/jobs/stop.json"
-
 	data := map[string]string{
 		"project": project_id,
 		"job":     job_id,
+	}
+	for k, v := range update_data {
+		if k != "project" && k != "job" {
+			data[k] = v
+		}
 	}
 	content, err := conn.do_request_content(baseUrl+method, "POST", data)
 	if err != nil {
 		return err
 	}
 	json.Unmarshal(content, jobs)
-
 	if jobs.Status != "ok" {
-		return errors.New(fmt.Sprintf("Jobs.Stop: Error while stopping the job. Message: %s", jobs.Message))
+		return errors.New(fmt.Sprintf("%s. Message: %s", error_string, jobs.Message))
 	}
 	return nil
+}
+
+// Stop the job with `job_id`.
+func (jobs *Jobs) Stop(conn *Connection, job_id string) error {
+	return jobs.postAction(conn, job_id, "/jobs/stop.json",
+		"Jobs.Stop: Error while stopping the job", nil)
+}
+
+// Update the job with `job_id` with the `update_data`.
+func (jobs *Jobs) Update(conn *Connection, job_id string, update_data map[string]string) error {
+	return jobs.postAction(conn, job_id, "/jobs/update.json",
+		"Jobs.Update: Error while updating the job", update_data)
+}
+
+// Delete the job with `job_id`.
+func (jobs *Jobs) Delete(conn *Connection, job_id string) error {
+	return jobs.postAction(conn, job_id, "/jobs/delete.json",
+		"Jobs.Delete: Error while deleting the job", nil)
 }
 
 // Returns up to `count` items for the job `job_id`, starting at `offset`. Each
@@ -264,17 +273,13 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 	for _, spider := range spiders {
 		method = method + fmt.Sprintf("&spider=%s", spider)
 	}
-
 	resp, err := conn.do_request(baseUrl+method, "GET", nil)
 	if err != nil {
 		return err
 	}
-
 	defer resp.Body.Close()
 
-	// Create buffer
 	buf := make([]byte, 1024)
-
 	for {
 		n, err := resp.Body.Read(buf)
 		if err != nil && err != io.EOF {
@@ -283,7 +288,6 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 		if n == 0 {
 			break
 		}
-
 		if _, err := out.Write(buf[:n]); err != nil {
 			return err
 		}
@@ -324,13 +328,11 @@ func ItemsAsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
 // Returns a channel of strings which each element is a JSON serialized job for
 // the project `project_id`. `count` and filters (a list of string of the type
 // key=value to apply to the result (see http://doc.scrapinghub.com/api.html#jobs-list-json)
-func JobsAsJsonLines(conn *Connection, project_id string, count int, filters []string) (<-chan string, error) {
+func JobsAsJsonLines(conn *Connection, project_id string, count int, filters map[string]string) (<-chan string, error) {
 	method := fmt.Sprintf("/jobs/list.jl?project=%s&count=%d", project_id, count)
-	mfilters := equality_list_to_map(filters)
-	for fname, fval := range mfilters {
+	for fname, fval := range filters {
 		method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
 	}
-
 	return retrieveLinesStream(conn, method)
 }
 

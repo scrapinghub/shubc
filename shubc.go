@@ -44,6 +44,18 @@ func find_apikey() string {
 	return ""
 }
 
+// Returns a map given a list of ["key=value", ...] strings
+func equality_list_to_map(data []string) map[string]string {
+	result := make(map[string]string)
+	for _, e := range data {
+		if strings.Index(e, "=") > 0 {
+			res := strings.Split(e, "=")
+			result[strings.TrimSpace(res[0])] = strings.TrimSpace(res[1])
+		}
+	}
+	return result
+}
+
 func main() {
 	var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
 	var count = flag.Int("count", 100, "Count for those commands that need a count limit")
@@ -102,7 +114,7 @@ func main() {
 					fmt.Println("Missing argument <project_id>")
 					os.Exit(1)
 				}
-				filters := flag.Args()[2:]
+				filters := equality_list_to_map(flag.Args()[2:])
 				if *jsonlines {
 					ch_jobs, err := scrapinghub.JobsAsJsonLines(&conn, project_id, *count, filters)
 					if err != nil {
@@ -152,7 +164,7 @@ func main() {
 				var jobs scrapinghub.Jobs
 				project_id := flag.Arg(1)
 				spider_name := flag.Arg(2)
-				args := flag.Args()[3:]
+				args := equality_list_to_map(flag.Args()[3:])
 				job_id, err := jobs.Schedule(&conn, project_id, spider_name, args)
 				if err != nil {
 					fmt.Println(err)
@@ -169,6 +181,27 @@ func main() {
 					os.Exit(1)
 				} else {
 					fmt.Printf("Stopped job: %s\n", job_id)
+				}
+			} else if cmd == "update" {
+				var jobs scrapinghub.Jobs
+				job_id := flag.Arg(1)
+				update_data := equality_list_to_map(flag.Args()[2:])
+				err := jobs.Update(&conn, job_id, update_data)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				} else {
+					fmt.Printf("Updated job: %s\n", job_id)
+				}
+			} else if cmd == "delete" {
+				var jobs scrapinghub.Jobs
+				job_id := flag.Arg(1)
+				err := jobs.Delete(&conn, job_id)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				} else {
+					fmt.Printf("Deleted job: %s\n", job_id)
 				}
 			} else if cmd == "items" {
 				job_id := flag.Arg(1)
