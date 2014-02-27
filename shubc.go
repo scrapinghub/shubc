@@ -81,14 +81,16 @@ func main() {
 			flag.PrintDefaults()
 			fmt.Println()
 			fmt.Println(" Commands: ")
-			fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
+			fmt.Println("   delete <job_id>                            - delete the job with <job_id>")
+			fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
 			fmt.Println("   jobs <project_id> [filters]                - list the last 100 jobs on project_id")
 			fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
-			fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
-			fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
-			fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
-			fmt.Println("   project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
 			fmt.Println("   log <job_id>                               - print to stdout the log for the job `job_id` (count & offset available)")
+			fmt.Println("   project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
+			fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
+			fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
+			fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
+			fmt.Println("   update <job_id> [args]                     - update the job with <job_id> using the `args` given")
 
 		} else {
 			if *apikey == "" {
