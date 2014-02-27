@@ -8,7 +8,7 @@ Installation
 
 _Requirements_
 
-* Golang >= 1.0 
+* Golang >= 1.1 
 
 _Steps_
 
