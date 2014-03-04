@@ -45,6 +45,7 @@ You can configure your APIKEY using the .scrapy.cfg file in your home. You can g
 * `jobinfo <job-id>`: print information about the job with `job-id`;
 * `log <job-id>`: print to Stdout the log for job `job-id`
 * `project-slybot <project-id> [spiders]`: download the zip and write it to Stdout or o.zip if `-o` option is given
+* `reschedule <job_id>`: re-schedule the job `job_id` with the same arguments and tags
 * `schedule <project-id> <spider-name> [args]`: schedule the spider `spider-name` with `args` in project `project-id`
 * `spiders <project-id>`: list the spiders on `project-id`
 * `stop <job-id>`: stop the job with `job-id`

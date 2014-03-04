@@ -87,6 +87,7 @@ func main() {
 			fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
 			fmt.Println("   log <job_id>                               - print to stdout the log for the job `job_id` (count & offset available)")
 			fmt.Println("   project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
+			fmt.Println("   reschedule <job_id>                        - re-schedule the job `job_id` with the same arguments and tags")
 			fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
 			fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
 			fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
