@@ -38,15 +38,17 @@ func (conn *Connection) New(apikey string) {
 
 // Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
 // Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request(rurl string, method string, params map[string]string) (resp *http.Response, err error) {
+func (conn *Connection) do_request(rurl string, method string, params map[string][]string) (resp *http.Response, err error) {
 	var req *http.Request
 
 	if method == "GET" {
 		req, err = http.NewRequest("GET", rurl, nil)
 	} else if method == "POST" {
 		data := url.Values{}
-		for k, v := range params {
-			data.Add(k, v)
+		for k, vals := range params {
+			for _, v := range vals {
+				data.Add(k, v)
+			}
 		}
 		req, err = http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
 	}
@@ -61,7 +63,7 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 
 // Do a HTTP request, using method `method` and return the response body in content
 // Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request_content(rurl string, method string, params map[string]string) ([]byte, error) {
+func (conn *Connection) do_request_content(rurl string, method string, params map[string][]string) ([]byte, error) {
 	resp, err := conn.do_request(rurl, method, params)
 	if err != nil {
 		return nil, err
@@ -110,11 +112,30 @@ func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, erro
 	return spider, nil
 }
 
+type Job struct {
+	CloseReason       string `json:"close_reason"`
+	Elapsed           int
+	ErrorsCount       int `json:"errors_count"`
+	Id                string
+	ItemsScraped      int    `json:"items_scraped"`
+	SpiderType        string `json:"spider_type"`
+	ResponsesReceived int    `json:"responses_received"`
+	Logs              int
+	Priority          int
+	Spider            string
+	SpiderArgs        map[string]string `json:"spider_args"`
+	StartedTime       string            `json:"started_time"`
+	State             string
+	Tags              []string
+	UpdatedTime       string `json:"updated_time"`
+	Version           string
+}
+
 type Jobs struct {
 	Status  string
 	Count   int
 	Total   int
-	Jobs    []map[string]interface{}
+	Jobs    []Job
 	JobId   string
 	Message string
 }
@@ -140,7 +161,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 }
 
 // Returns the job information in map object given the job_id
-func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, error) {
+func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	result := re_jobid.FindStringSubmatch(job_id)
 	if len(result) == 0 {
 		return nil, wrong_job_id_error
@@ -161,25 +182,31 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (map[string]string, e
 		return nil, errors.New(fmt.Sprintf("Jobs.JobInfo: Job %s does not exist", job_id))
 	}
 
-	m := make(map[string]string)
-	for k, v := range jobs.Jobs[0] {
-		m[k] = fmt.Sprintf("%v", v)
+	return &jobs.Jobs[0], nil
+}
+
+func project_data_map(project_id string, spider_name string, job_id string, args map[string]string) map[string][]string {
+	data := map[string][]string{
+		"project": []string{project_id},
 	}
-	return m, nil
+	if spider_name != "" {
+		data["spider"] = []string{spider_name}
+	}
+	if job_id != "" {
+		data["job"] = []string{job_id}
+	}
+	for k, v := range args {
+		if k != "project" && k != "spider" {
+			data[k] = []string{v}
+		}
+	}
+	return data
 }
 
 // Schedule the spider with name `spider_name` and arguments `args` on `project_id`.
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args map[string]string) (string, error) {
 	method := "/schedule.json"
-	data := map[string]string{
-		"project": project_id,
-		"spider":  spider_name,
-	}
-	for k, v := range args {
-		if k != "project" && k != "spider" {
-			data[k] = v
-		}
-	}
+	data := project_data_map(project_id, spider_name, "", args)
 	content, err := conn.do_request_content(baseUrl+method, "POST", data)
 	if err != nil {
 		return "", err
@@ -192,6 +219,33 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	return jobs.JobId, nil
 }
 
+// Re-schedule the spider with `job_id` using the same tags and parameters
+func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return "", wrong_job_id_error
+	}
+	project_id := result[1]
+
+	job, err := jobs.JobInfo(conn, job_id)
+	if err != nil {
+		return "", err
+	}
+	method := "/schedule.json"
+	data := project_data_map(project_id, job.Spider, "", job.SpiderArgs)
+	data["add_tag"] = job.Tags
+	content, err := conn.do_request_content(baseUrl+method, "POST", data)
+	if err != nil {
+		return "", err
+	}
+	json.Unmarshal(content, jobs)
+
+	if jobs.Status != "ok" {
+		return "", errors.New(fmt.Sprintf("Jobs.Reschedule: Error while scheduling the job. Message: %s", jobs.Message))
+	}
+	return jobs.JobId, nil
+}
+
 func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, error_string string, update_data map[string]string) error {
 	result := re_jobid.FindStringSubmatch(job_id)
 	if len(result) == 0 {
@@ -199,15 +253,7 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	}
 	project_id := result[1]
 
-	data := map[string]string{
-		"project": project_id,
-		"job":     job_id,
-	}
-	for k, v := range update_data {
-		if k != "project" && k != "job" {
-			data[k] = v
-		}
-	}
+	data := project_data_map(project_id, "", job_id, update_data)
 	content, err := conn.do_request_content(baseUrl+method, "POST", data)
 	if err != nil {
 		return err

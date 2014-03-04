@@ -137,14 +137,9 @@ func main() {
 					outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
 					fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "started_time")
 					fmt.Println(dashes(106))
-					started_time := ""
 					for _, j := range jobs_list.Jobs {
-						jid := j["id"].(string)
-						if j["started_time"] != nil {
-							started_time = j["started_time"].(string)
-						}
-						fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %20s |\n", jid, j["spider"].(string), j["state"].(string),
-							int(j["items_scraped"].(float64)), int(j["errors_count"].(float64)), started_time)
+						fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %20s |\n", j.Id, j.Spider, j.State,
+							j.ItemsScraped, j.ErrorsCount, j.StartedTime)
 					}
 				}
 			} else if cmd == "jobinfo" {
@@ -158,9 +153,31 @@ func main() {
 					outfmt := "| %-30s | %60s |\n"
 					fmt.Printf(outfmt, "key", "value")
 					fmt.Println(dashes(97))
-					for k, v := range jobinfo {
-						fmt.Printf(outfmt, k, v)
+					fmt.Printf(outfmt, "id", jobinfo.Id)
+					fmt.Printf(outfmt, "spider", jobinfo.Spider)
+					fmt.Printf(outfmt, "spider_args", "")
+					for k, v := range jobinfo.SpiderArgs {
+						fmt.Printf(outfmt, " ", fmt.Sprintf("%s = %s", k, v))
 					}
+					fmt.Printf(outfmt, "spider_type", jobinfo.SpiderType)
+					fmt.Printf(outfmt, "state", jobinfo.State)
+					fmt.Printf(outfmt, "close_reason", jobinfo.CloseReason)
+					fmt.Println(dashes(97))
+					fmt.Printf(outfmt, "responses_received", fmt.Sprintf("%d", jobinfo.ResponsesReceived))
+					fmt.Printf(outfmt, "items_scraped", fmt.Sprintf("%d", jobinfo.ItemsScraped))
+					fmt.Printf(outfmt, "errors_count", fmt.Sprintf("%d", jobinfo.ErrorsCount))
+					fmt.Printf(outfmt, "logs", fmt.Sprintf("%d", jobinfo.Logs))
+					fmt.Println(dashes(97))
+					fmt.Printf(outfmt, "started_time", jobinfo.StartedTime)
+					fmt.Printf(outfmt, "updated_time", jobinfo.UpdatedTime)
+					fmt.Printf(outfmt, "elapsed", fmt.Sprintf("%d", jobinfo.Elapsed))
+					fmt.Printf(outfmt, "tags", " ")
+					for _, e := range jobinfo.Tags {
+						fmt.Printf(outfmt, " ", e)
+					}
+					fmt.Printf(outfmt, "priority", fmt.Sprintf("%d", jobinfo.Priority))
+					fmt.Printf(outfmt, "version", jobinfo.Version)
+					fmt.Println(dashes(97))
 				}
 			} else if cmd == "schedule" {
 				var jobs scrapinghub.Jobs
@@ -264,6 +281,16 @@ func main() {
 				}
 				for line := range ch_lines {
 					fmt.Println(line)
+				}
+			} else if cmd == "reschedule" {
+				var jobs scrapinghub.Jobs
+				job_id := flag.Arg(1)
+				new_job_id, err := jobs.Reschedule(&conn, job_id)
+				if err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				} else {
+					fmt.Printf("Re-scheduled job new id: %s\n", new_job_id)
 				}
 			} else {
 				fmt.Printf("'%s' command not found\n", cmd)
