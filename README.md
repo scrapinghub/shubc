@@ -12,8 +12,8 @@ _Requirements_
 
 _Steps_
 
-    $ go get github.com/andrix/shubc
-    $ go install github.com/andrix/shubc
+    $ go get github.com/scrapinghub/shubc
+    $ go install github.com/scrapinghub/shubc
 
 shubc: a command line tool
 --------------------------
