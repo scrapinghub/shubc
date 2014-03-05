@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -56,6 +58,8 @@ func equality_list_to_map(data []string) map[string]string {
 	return result
 }
 
+var re_egg_pattern = regexp.MustCompile(`(.+?)-(\d(?:\.\d)*)-?.*`)
+
 func main() {
 	var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
 	var count = flag.Int("count", 100, "Count for those commands that need a count limit")
@@ -81,17 +85,32 @@ func main() {
 			flag.PrintDefaults()
 			fmt.Println()
 			fmt.Println(" Commands: ")
-			fmt.Println("   delete <job_id>                            - delete the job with <job_id>")
-			fmt.Println("   items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
-			fmt.Println("   jobs <project_id> [filters]                - list the last 100 jobs on project_id")
-			fmt.Println("   jobinfo <job_id>                           - print information about the job with <job_id>")
-			fmt.Println("   log <job_id>                               - print to stdout the log for the job `job_id` (count & offset available)")
-			fmt.Println("   project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
-			fmt.Println("   reschedule <job_id>                        - re-schedule the job `job_id` with the same arguments and tags")
-			fmt.Println("   schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
-			fmt.Println("   spiders <project_id>                       - list the spiders on project_id")
-			fmt.Println("   stop <job_id>                              - stop the job with <job_id>")
-			fmt.Println("   update <job_id> [args]                     - update the job with <job_id> using the `args` given")
+
+			fmt.Println("   Spiders API: ")
+			fmt.Println("     spiders <project_id>                       - list the spiders on project_id")
+
+			fmt.Println("   Jobs API: ")
+			fmt.Println("     schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>")
+			fmt.Println("     reschedule <job_id>                        - re-schedule the job `job_id` with the same arguments and tags")
+			fmt.Println("     jobs <project_id> [filters]                - list the last 100 jobs on project_id")
+			fmt.Println("     jobinfo <job_id>                           - print information about the job with <job_id>")
+			fmt.Println("     update <job_id> [args]                     - update the job with <job_id> using the `args` given")
+			fmt.Println("     stop <job_id>                              - stop the job with <job_id>")
+			fmt.Println("     delete <job_id>                            - delete the job with <job_id>")
+
+			fmt.Println("   Items API: ")
+			fmt.Println("     items <job_id>                             - print to stdout the items for <job_id> (count & offset available)")
+
+			fmt.Println("   Logs API: ")
+			fmt.Println("     log <job_id>                               - print to stdout the log for the job `job_id` (count & offset available)")
+
+			fmt.Println("   Eggs API: ")
+			fmt.Println("     eggs-add <project_id> <path> [name=n version=v] - add the egg in `path` to the project `project_id`. By default it guess the name and version from `path`, but can be given using name=eggname and version=XXX.")
+			fmt.Println("     eggs-list <project_id>                          - list the eggs in `project_id`")
+			fmt.Println("     eggs-delete <project_id> <egg_name>             - delete the egg `egg_name` in the project `project_id`")
+
+			fmt.Println("   Autoscraping API: ")
+			fmt.Println("     project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
 
 		} else {
 			if *apikey == "" {
@@ -102,7 +121,7 @@ func main() {
 				spider_list, err := spiders.List(&conn, flag.Arg(1))
 
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("spiders error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("| %30s | %10s | %20s |\n", "name", "type", "version")
@@ -114,14 +133,14 @@ func main() {
 			} else if cmd == "jobs" {
 				project_id := flag.Arg(1)
 				if len(flag.Args()) < 2 {
-					fmt.Println("Missing argument <project_id>")
+					fmt.Printf("jobs error: Missing argument <project_id>\n")
 					os.Exit(1)
 				}
 				filters := equality_list_to_map(flag.Args()[2:])
 				if *jsonlines {
 					ch_jobs, err := scrapinghub.JobsAsJsonLines(&conn, project_id, *count, filters)
 					if err != nil {
-						fmt.Println(err)
+						fmt.Printf("jobs error: %s\n", err)
 						os.Exit(1)
 					}
 					for line := range ch_jobs {
@@ -132,7 +151,7 @@ func main() {
 					jobs_list, err := jobs.List(&conn, project_id, *count, filters)
 
 					if err != nil {
-						fmt.Println(err)
+						fmt.Printf("jobs error: %s", err)
 						os.Exit(1)
 					}
 					outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
@@ -148,7 +167,7 @@ func main() {
 				jobinfo, err := jobs.JobInfo(&conn, flag.Arg(1))
 
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("jobinfo error: %s\n", err)
 					os.Exit(1)
 				} else {
 					outfmt := "| %-30s | %60s |\n"
@@ -187,7 +206,7 @@ func main() {
 				args := equality_list_to_map(flag.Args()[3:])
 				job_id, err := jobs.Schedule(&conn, project_id, spider_name, args)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("schedule error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("Scheduled job: %s\n", job_id)
@@ -197,7 +216,7 @@ func main() {
 				job_id := flag.Arg(1)
 				err := jobs.Stop(&conn, job_id)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Println("stop error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("Stopped job: %s\n", job_id)
@@ -208,7 +227,7 @@ func main() {
 				update_data := equality_list_to_map(flag.Args()[2:])
 				err := jobs.Update(&conn, job_id, update_data)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("update error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("Updated job: %s\n", job_id)
@@ -218,7 +237,7 @@ func main() {
 				job_id := flag.Arg(1)
 				err := jobs.Delete(&conn, job_id)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("delete error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("Deleted job: %s\n", job_id)
@@ -228,7 +247,7 @@ func main() {
 				if *jsonlines {
 					ch_lines, err := scrapinghub.ItemsAsJsonLines(&conn, job_id)
 					if err != nil {
-						fmt.Printf("Error: %s\n", err)
+						fmt.Printf("items error: %s\n", err)
 						os.Exit(1)
 					}
 					for line := range ch_lines {
@@ -237,7 +256,7 @@ func main() {
 				} else {
 					items, err := scrapinghub.RetrieveItems(&conn, job_id, *count, *offset)
 					if err != nil {
-						fmt.Printf("Error: %s\n", err)
+						fmt.Printf("items error: %s\n", err)
 						os.Exit(1)
 					}
 					for i, e := range items {
@@ -257,7 +276,7 @@ func main() {
 				if *output != "" {
 					out, err = os.Create(*output)
 					if err != nil {
-						fmt.Printf("Error writing to file: %s\n", err)
+						fmt.Printf("project slybot error: fail to write to file: %s\n", err)
 						os.Exit(1)
 					}
 				}
@@ -270,14 +289,14 @@ func main() {
 				err = scrapinghub.RetrieveSlybotProject(&conn, project_id, spiders, out)
 
 				if err != nil {
-					fmt.Printf("Error: %s\n", err)
+					fmt.Printf("project-slybot error: %s\n", err)
 					os.Exit(1)
 				}
 			} else if cmd == "log" {
 				job_id := flag.Arg(1)
 				ch_lines, err := scrapinghub.LogLines(&conn, job_id, *count, *offset)
 				if err != nil {
-					fmt.Printf("Error: %s\n", err)
+					fmt.Printf("log error: %s\n", err)
 					os.Exit(1)
 				}
 				for line := range ch_lines {
@@ -288,11 +307,69 @@ func main() {
 				job_id := flag.Arg(1)
 				new_job_id, err := jobs.Reschedule(&conn, job_id)
 				if err != nil {
-					fmt.Println(err)
+					fmt.Printf("reschedule error: %s\n", err)
 					os.Exit(1)
 				} else {
 					fmt.Printf("Re-scheduled job new id: %s\n", new_job_id)
 				}
+			} else if cmd == "eggs-add" {
+				project_id := flag.Arg(1)
+				egg_path := flag.Arg(2)
+				name_version := flag.Args()[3:]
+				var egg_name string
+				var egg_ver string
+
+				if len(name_version) > 0 {
+					name_ver_map := equality_list_to_map(name_version)
+					egg_name = name_ver_map["name"]
+					egg_ver = name_ver_map["version"]
+				} else {
+					result := re_egg_pattern.FindStringSubmatch(filepath.Base(egg_path))
+					if len(result) <= 0 {
+						fmt.Println("eggs-add error: Can't guess the name and version from egg path filename, provide it using name=<name> and version=<version> as parameters.")
+						os.Exit(1)
+					}
+					egg_name = result[1]
+					egg_ver = result[2]
+				}
+				if egg_name == "" || egg_ver == "" {
+					fmt.Println("Error: name and version are required")
+					os.Exit(1)
+				}
+				var eggs scrapinghub.Eggs
+				eggdata, err := eggs.Add(&conn, project_id, egg_name, egg_ver, egg_path)
+				if err != nil {
+					fmt.Printf("eggs-add error: %s\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("Egg uploaded successfully! Project: %s, Egg name: %s, version: %s\n", project_id, eggdata.Name, eggdata.Version)
+			} else if cmd == "eggs-list" {
+				project_id := flag.Arg(1)
+				var eggs scrapinghub.Eggs
+				egglist, err := eggs.List(&conn, project_id)
+				if err != nil {
+					fmt.Printf("eggs-list error: %s\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(dashes(97))
+				outfmt := "| %-30s | %60s |\n"
+				fmt.Printf(outfmt, "Name", "Version")
+				fmt.Println(dashes(97))
+				for _, egg := range egglist {
+					fmt.Printf(outfmt, egg.Name, egg.Version)
+				}
+				fmt.Println(dashes(97))
+			} else if cmd == "eggs-delete" {
+				project_id := flag.Arg(1)
+				egg_name := flag.Arg(2)
+
+				var eggs scrapinghub.Eggs
+				err := eggs.Delete(&conn, project_id, egg_name)
+				if err != nil {
+					fmt.Printf("eggs-delete error: %s\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 			} else {
 				fmt.Printf("'%s' command not found\n", cmd)
 				os.Exit(1)

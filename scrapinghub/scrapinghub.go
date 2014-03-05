@@ -9,19 +9,23 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 )
 
 // Scrapinghub Base API URL
 var baseUrl = "https://dash.scrapinghub.com/api"
 var re_jobid = regexp.MustCompile(`(?P<project_id>\d+)/\d+/\d+`)
+var libversion = "0.1"
 
 type Connection struct {
-	client *http.Client
-	apikey string
+	client     *http.Client
+	apikey     string
+	user_agent string
 }
 
 // Create a new connection to Scrapinghub API
@@ -33,6 +37,7 @@ func (conn *Connection) New(apikey string) {
 		DisableCompression: true,
 	}
 	conn.apikey = apikey
+	conn.user_agent = fmt.Sprintf("scrapinghub.go/%s (http://github.com/andrix/shubc)", libversion)
 	conn.client = &http.Client{Transport: tr}
 }
 
@@ -59,6 +64,58 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 	// Set Scrapinghub api key to request
 	req.SetBasicAuth(conn.apikey, "")
 	return conn.client.Do(req)
+}
+
+func (conn *Connection) post_request(rurl string, params map[string]string, files map[string]string) ([]byte, error) {
+	body := &bytes.Buffer{}
+
+	writer := multipart.NewWriter(body)
+	for fname, file_path := range files {
+		file, err := os.Open(file_path)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		part, err := writer.CreateFormFile(fname, filepath.Base(file_path))
+		if err != nil {
+			return nil, err
+		}
+		_, err = io.Copy(part, file)
+	}
+	for key, val := range params {
+		_ = writer.WriteField(key, val)
+	}
+	err := writer.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", rurl, body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", writer.FormDataContentType())
+	// Set Scrapinghub api key to request
+	req.SetBasicAuth(conn.apikey, "")
+	resp, err := conn.client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+	content := make([]byte, 0)
+	cbuf := make([]byte, 1024)
+	for {
+		n, err := resp.Body.Read(cbuf)
+		if err != nil && err != io.EOF {
+			panic(err)
+		}
+		if n == 0 {
+			break
+		}
+		content = append(content, cbuf[:n]...)
+	}
+	return content, nil
 }
 
 // Do a HTTP request, using method `method` and return the response body in content
@@ -393,4 +450,72 @@ func LogLines(conn *Connection, job_id string, count, offset int) (<-chan string
 	method := fmt.Sprintf("/log.txt?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
 	return retrieveLinesStream(conn, method)
+}
+
+/*
+  Eggs API methods
+*/
+
+type Egg struct {
+	Name    string
+	Version string
+}
+type Eggs struct {
+	Status  string
+	Message string
+	EggData Egg   `json:"egg"`
+	EggList []Egg `json:"eggs"`
+}
+
+// Add a python egg to the project `project_id` with `name` and `version` given.
+func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path string) (*Egg, error) {
+	params := map[string]string{
+		"project": project_id,
+		"name":    name,
+		"version": version,
+	}
+	method := "/eggs/add.json"
+	content, err := conn.post_request(baseUrl+method, params, map[string]string{"egg": egg_path})
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(content, eggs)
+
+	if eggs.Status != "ok" {
+		return nil, errors.New(fmt.Sprintf("Eggs.Add: Error ocurred while uploading egg: %s", eggs.Message))
+	}
+	return &eggs.EggData, nil
+}
+
+// Delete the egg `egg_name` from project `project_id`
+func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
+	method := "/eggs/delete.json"
+	params := map[string][]string{
+		"project": []string{project_id},
+		"name":    []string{egg_name},
+	}
+	content, err := conn.do_request_content(baseUrl+method, "POST", params)
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(content, eggs)
+	if eggs.Status != "ok" {
+		return errors.New(fmt.Sprintf("Eggs.Delete: Error ocurred while deleting the egg: ", eggs.Message))
+	}
+	return nil
+}
+
+// List all the eggs in the project `project_id`
+func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
+	method := fmt.Sprintf("/eggs/list.json?project=%s", project_id)
+	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(content, eggs)
+
+	if eggs.Status != "ok" {
+		return nil, errors.New(fmt.Sprintf("Eggs.List: Error ocurred while listing the project <%s> eggs: %s", project_id, eggs.Message))
+	}
+	return eggs.EggList, nil
 }
