@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/andrix/shubc/scrapinghub"
+	"github.com/scrapinghub/shubc/scrapinghub"
 	"os"
 	"os/user"
 	"path"
