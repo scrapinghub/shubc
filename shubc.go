@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/andrix/shubc/scrapinghub"
+	"github.com/scrapinghub/shubc/scrapinghub"
 	"os"
 	"os/user"
 	"path"
@@ -21,8 +21,13 @@ func dashes(n int) string {
 }
 
 func find_apikey() string {
+        if os.Getenv("SH_APIKEY") != "" {
+                return os.Getenv("SH_APIKEY")
+        }
+
 	u, _ := user.Current()
 	scrapy_cfg := path.Join(u.HomeDir, "/.scrapy.cfg")
+
 	if st, err := os.Stat(scrapy_cfg); err == nil {
 		f, err := os.Open(scrapy_cfg)
 		if err != nil {
