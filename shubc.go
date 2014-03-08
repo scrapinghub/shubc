@@ -21,9 +21,9 @@ func dashes(n int) string {
 }
 
 func find_apikey() string {
-        if os.Getenv("SH_APIKEY") != "" {
-                return os.Getenv("SH_APIKEY")
-        }
+	if os.Getenv("SH_APIKEY") != "" {
+		return os.Getenv("SH_APIKEY")
+	}
 
 	u, _ := user.Current()
 	scrapy_cfg := path.Join(u.HomeDir, "/.scrapy.cfg")

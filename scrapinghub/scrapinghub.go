@@ -46,22 +46,28 @@ func (conn *Connection) SetAPIUrl(url string) {
 	conn.BaseUrl = url
 }
 
-// Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
-// Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request(rurl string, method string, params map[string][]string) (resp *http.Response, err error) {
-	var req *http.Request
-
-	if method == "GET" {
-		req, err = http.NewRequest("GET", rurl, nil)
-	} else if method == "POST" {
-		data := url.Values{}
-		for k, vals := range params {
-			for _, v := range vals {
-				data.Add(k, v)
-			}
-		}
-		req, err = http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
+// Do a GET HTTP request and returns a reponse type `http.Reponse` and `error`
+func (conn *Connection) Get(rurl string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", rurl, nil)
+	if err != nil {
+		return nil, err
 	}
+	// Set Scrapinghub api key to request
+	req.SetBasicAuth(conn.apikey, "")
+	req.Header.Add("User-Agent", conn.user_agent)
+	return conn.client.Do(req)
+}
+
+// Do a POST HTTP request and returns a reponse type `http.Reponse` and `error`
+// Argument `params` is a map with the POST parameters
+func (conn *Connection) Post(rurl string, params map[string][]string) (*http.Response, error) {
+	data := url.Values{}
+	for k, vals := range params {
+		for _, v := range vals {
+			data.Add(k, v)
+		}
+	}
+	req, err := http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
 
 	if err != nil {
 		return nil, err
@@ -72,7 +78,10 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 	return conn.client.Do(req)
 }
 
-func (conn *Connection) post_request(rurl string, params map[string]string, files map[string]string) ([]byte, error) {
+// Do a POST HTTP request and returns a reponse type `http.Reponse` and `error`
+// Argument `params` is a map with the POST parameters, and files is a map with
+// <filename, filepath> to be posted
+func (conn *Connection) PostFiles(rurl string, params map[string][]string, files map[string]string) (*http.Response, error) {
 	body := &bytes.Buffer{}
 
 	writer := multipart.NewWriter(body)
@@ -88,58 +97,34 @@ func (conn *Connection) post_request(rurl string, params map[string]string, file
 		}
 		_, err = io.Copy(part, file)
 	}
-	for key, val := range params {
-		_ = writer.WriteField(key, val)
+	for key, vals := range params {
+		for _, val := range vals {
+			_ = writer.WriteField(key, val)
+		}
 	}
 	err := writer.Close()
 	if err != nil {
 		return nil, err
 	}
-
 	req, err := http.NewRequest("POST", rurl, body)
 	if err != nil {
 		return nil, err
 	}
-
 	req.Header.Add("Content-Type", writer.FormDataContentType())
 	// Set Scrapinghub api key to request
 	req.SetBasicAuth(conn.apikey, "")
 	req.Header.Add("User-Agent", conn.user_agent)
-	resp, err := conn.client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-	content := make([]byte, 0)
-	cbuf := make([]byte, 1024)
-	for {
-		n, err := resp.Body.Read(cbuf)
-		if err != nil && err != io.EOF {
-			panic(err)
-		}
-		if n == 0 {
-			break
-		}
-		content = append(content, cbuf[:n]...)
-	}
-	return content, nil
+	return conn.client.Do(req)
 }
 
-// Do a HTTP request, using method `method` and return the response body in content
-// Argument `params` is a map with the POST parameters, in case method = POST.
-func (conn *Connection) do_request_content(rurl string, method string, params map[string][]string) ([]byte, error) {
-	resp, err := conn.do_request(rurl, method, params)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create buffer
+// Read the response.Body and return the body as a byte array
+func ReadBody(resp *http.Response) ([]byte, error) {
 	content := make([]byte, 0)
 	buf := make([]byte, 1024)
 	for {
 		n, err := resp.Body.Read(buf)
 		if err != nil && err != io.EOF {
-			panic(err)
+			return nil, err
 		}
 		if n == 0 {
 			break
@@ -163,11 +148,14 @@ var (
 
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	method := "/spiders/list.json?project=" + project_id
-	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
 	if err != nil {
 		return nil, err
 	}
-
+	content, err := ReadBody(resp)
+	if err != nil {
+		return nil, err
+	}
 	json.Unmarshal(content, spider)
 
 	if spider.Status != "ok" {
@@ -211,7 +199,11 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 	for fname, fval := range filters {
 		method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
 	}
-	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
+	if err != nil {
+		return nil, err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +225,11 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	project_id := result[1]
 
 	method := fmt.Sprintf("/jobs/list.json?project=%s&job=%s", project_id, job_id)
-	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
+	if err != nil {
+		return nil, err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +267,11 @@ func project_data_map(project_id string, spider_name string, job_id string, args
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args map[string]string) (string, error) {
 	method := "/schedule.json"
 	data := project_data_map(project_id, spider_name, "", args)
-	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
+	resp, err := conn.Post(conn.BaseUrl+method, data)
+	if err != nil {
+		return "", err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return "", err
 	}
@@ -298,10 +298,15 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	method := "/schedule.json"
 	data := project_data_map(project_id, job.Spider, "", job.SpiderArgs)
 	data["add_tag"] = job.Tags
-	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
+	resp, err := conn.Post(conn.BaseUrl+method, data)
 	if err != nil {
 		return "", err
 	}
+	content, err := ReadBody(resp)
+	if err != nil {
+		return "", err
+	}
+
 	json.Unmarshal(content, jobs)
 
 	if jobs.Status != "ok" {
@@ -318,7 +323,11 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	project_id := result[1]
 
 	data := project_data_map(project_id, "", job_id, update_data)
-	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
+	resp, err := conn.Post(conn.BaseUrl+method, data)
+	if err != nil {
+		return err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return err
 	}
@@ -358,10 +367,15 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 
 	method := fmt.Sprintf("/items.json?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
-	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
 	if err != nil {
 		return nil, err
 	}
+	content, err := ReadBody(resp)
+	if err != nil {
+		return nil, err
+	}
+
 	var f interface{}
 	err = json.Unmarshal(content, &f)
 	if err != nil {
@@ -383,7 +397,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 	for _, spider := range spiders {
 		method = method + fmt.Sprintf("&spider=%s", spider)
 	}
-	resp, err := conn.do_request(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
 	if err != nil {
 		return err
 	}
@@ -406,7 +420,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 }
 
 func retrieveLinesStream(conn *Connection, method string) (<-chan string, error) {
-	resp, err := conn.do_request(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
 	if err != nil {
 		return nil, err
 	}
@@ -476,13 +490,17 @@ type Eggs struct {
 
 // Add a python egg to the project `project_id` with `name` and `version` given.
 func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path string) (*Egg, error) {
-	params := map[string]string{
-		"project": project_id,
-		"name":    name,
-		"version": version,
+	params := map[string][]string{
+		"project": []string{project_id},
+		"name":    []string{name},
+		"version": []string{version},
 	}
 	method := "/eggs/add.json"
-	content, err := conn.post_request(conn.BaseUrl+method, params, map[string]string{"egg": egg_path})
+	resp, err := conn.PostFiles(conn.BaseUrl+method, params, map[string]string{"egg": egg_path})
+	if err != nil {
+		return nil, err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return nil, err
 	}
@@ -501,7 +519,11 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 		"project": []string{project_id},
 		"name":    []string{egg_name},
 	}
-	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", params)
+	resp, err := conn.Post(conn.BaseUrl+method, params)
+	if err != nil {
+		return err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return err
 	}
@@ -515,12 +537,15 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 // List all the eggs in the project `project_id`
 func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
 	method := fmt.Sprintf("/eggs/list.json?project=%s", project_id)
-	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
+	resp, err := conn.Get(conn.BaseUrl + method)
+	if err != nil {
+		return nil, err
+	}
+	content, err := ReadBody(resp)
 	if err != nil {
 		return nil, err
 	}
 	json.Unmarshal(content, eggs)
-
 	if eggs.Status != "ok" {
 		return nil, errors.New(fmt.Sprintf("Eggs.List: Error ocurred while listing the project <%s> eggs: %s", project_id, eggs.Message))
 	}
