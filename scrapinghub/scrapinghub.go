@@ -18,7 +18,6 @@ import (
 )
 
 // Scrapinghub Base API URL
-var baseUrl = "https://dash.scrapinghub.com/api"
 var re_jobid = regexp.MustCompile(`(?P<project_id>\d+)/\d+/\d+`)
 var libversion = "0.1"
 
@@ -26,6 +25,7 @@ type Connection struct {
 	client     *http.Client
 	apikey     string
 	user_agent string
+	BaseUrl    string
 }
 
 // Create a new connection to Scrapinghub API
@@ -37,8 +37,13 @@ func (conn *Connection) New(apikey string) {
 		DisableCompression: true,
 	}
 	conn.apikey = apikey
-	conn.user_agent = fmt.Sprintf("scrapinghub.go/%s (http://github.com/andrix/shubc)", libversion)
+	conn.BaseUrl = "https://dash.scrapinghub.com/api"
+	conn.user_agent = fmt.Sprintf("scrapinghub.go/%s (http://github.com/scrapinghub/shubc)", libversion)
 	conn.client = &http.Client{Transport: tr}
+}
+
+func (conn *Connection) SetAPIUrl(url string) {
+	conn.BaseUrl = url
 }
 
 // Do a HTTP request, using method `method` and returns a reponse type (http.Reponse)
@@ -63,6 +68,7 @@ func (conn *Connection) do_request(rurl string, method string, params map[string
 	}
 	// Set Scrapinghub api key to request
 	req.SetBasicAuth(conn.apikey, "")
+	req.Header.Add("User-Agent", conn.user_agent)
 	return conn.client.Do(req)
 }
 
@@ -98,6 +104,7 @@ func (conn *Connection) post_request(rurl string, params map[string]string, file
 	req.Header.Add("Content-Type", writer.FormDataContentType())
 	// Set Scrapinghub api key to request
 	req.SetBasicAuth(conn.apikey, "")
+	req.Header.Add("User-Agent", conn.user_agent)
 	resp, err := conn.client.Do(req)
 
 	if err != nil {
@@ -156,7 +163,7 @@ var (
 
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	method := "/spiders/list.json?project=" + project_id
-	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +211,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 	for fname, fval := range filters {
 		method = fmt.Sprintf("%s&%s=%s", method, fname, fval)
 	}
-	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +233,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	project_id := result[1]
 
 	method := fmt.Sprintf("/jobs/list.json?project=%s&job=%s", project_id, job_id)
-	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +271,7 @@ func project_data_map(project_id string, spider_name string, job_id string, args
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args map[string]string) (string, error) {
 	method := "/schedule.json"
 	data := project_data_map(project_id, spider_name, "", args)
-	content, err := conn.do_request_content(baseUrl+method, "POST", data)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
 	if err != nil {
 		return "", err
 	}
@@ -291,7 +298,7 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	method := "/schedule.json"
 	data := project_data_map(project_id, job.Spider, "", job.SpiderArgs)
 	data["add_tag"] = job.Tags
-	content, err := conn.do_request_content(baseUrl+method, "POST", data)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +318,7 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	project_id := result[1]
 
 	data := project_data_map(project_id, "", job_id, update_data)
-	content, err := conn.do_request_content(baseUrl+method, "POST", data)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", data)
 	if err != nil {
 		return err
 	}
@@ -351,7 +358,7 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 
 	method := fmt.Sprintf("/items.json?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
-	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -376,7 +383,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 	for _, spider := range spiders {
 		method = method + fmt.Sprintf("&spider=%s", spider)
 	}
-	resp, err := conn.do_request(baseUrl+method, "GET", nil)
+	resp, err := conn.do_request(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return err
 	}
@@ -399,7 +406,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 }
 
 func retrieveLinesStream(conn *Connection, method string) (<-chan string, error) {
-	resp, err := conn.do_request(baseUrl+method, "GET", nil)
+	resp, err := conn.do_request(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +482,7 @@ func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path stri
 		"version": version,
 	}
 	method := "/eggs/add.json"
-	content, err := conn.post_request(baseUrl+method, params, map[string]string{"egg": egg_path})
+	content, err := conn.post_request(conn.BaseUrl+method, params, map[string]string{"egg": egg_path})
 	if err != nil {
 		return nil, err
 	}
@@ -494,7 +501,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 		"project": []string{project_id},
 		"name":    []string{egg_name},
 	}
-	content, err := conn.do_request_content(baseUrl+method, "POST", params)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "POST", params)
 	if err != nil {
 		return err
 	}
@@ -508,7 +515,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 // List all the eggs in the project `project_id`
 func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
 	method := fmt.Sprintf("/eggs/list.json?project=%s", project_id)
-	content, err := conn.do_request_content(baseUrl+method, "GET", nil)
+	content, err := conn.do_request_content(conn.BaseUrl+method, "GET", nil)
 	if err != nil {
 		return nil, err
 	}
