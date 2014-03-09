@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -117,23 +118,6 @@ func (conn *Connection) PostFiles(rurl string, params map[string][]string, files
 	return conn.client.Do(req)
 }
 
-// Read the response.Body and return the body as a byte array
-func ReadBody(resp *http.Response) ([]byte, error) {
-	content := make([]byte, 0)
-	buf := make([]byte, 1024)
-	for {
-		n, err := resp.Body.Read(buf)
-		if err != nil && err != io.EOF {
-			return nil, err
-		}
-		if n == 0 {
-			break
-		}
-		content = append(content, buf[:n]...)
-	}
-	return content, nil
-}
-
 type Spiders struct {
 	Spiders []map[string]string
 	Status  string
@@ -152,7 +136,7 @@ func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, erro
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +187,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +213,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +255,7 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	if err != nil {
 		return "", err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -302,7 +286,7 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -327,7 +311,7 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	if err != nil {
 		return err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -371,7 +355,7 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -500,7 +484,7 @@ func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path stri
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -523,7 +507,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 	if err != nil {
 		return err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -541,7 +525,7 @@ func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
 	if err != nil {
 		return nil, err
 	}
-	content, err := ReadBody(resp)
+	content, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
