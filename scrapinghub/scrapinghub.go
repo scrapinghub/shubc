@@ -422,16 +422,34 @@ func retrieveLinesStream(conn *Connection, method string) (<-chan string, error)
 
 //  Given a job_id, returns a channel of strings where each element is a line of
 //  the JsonLines returned by the API items.jl endpoint.
-func ItemsAsJsonLines(conn *Connection, job_id string) (<-chan string, error) {
+func ItemsAsJsonLines(conn *Connection, job_id string, count, offset int) (<-chan string, error) {
 	result := re_jobid.FindStringSubmatch(job_id)
 	if len(result) == 0 {
 		return nil, wrong_job_id_error
 	}
 	project_id := result[1]
-	method := fmt.Sprintf("/items.jl?project=%s&job=%s", project_id, job_id)
+	method := fmt.Sprintf("/items.jl?project=%s&job=%s&count=%d&offset=%d", project_id, job_id, count, offset)
 
 	return retrieveLinesStream(conn, method)
 }
+
+//  Given a job_id, returns a channel of strings where each element is a line of
+//  the JsonLines returned by the API items.jl endpoint.
+func ItemsAsCSV(conn *Connection, job_id string, include_headers bool, fields string) (<-chan string, error) {
+	result := re_jobid.FindStringSubmatch(job_id)
+	if len(result) == 0 {
+		return nil, wrong_job_id_error
+	}
+	project_id := result[1]
+    var iih int = 0
+    if include_headers {
+        iih = 1
+    }
+	method := fmt.Sprintf("/items.csv?project=%s&job=%s&include_headers=%d&fields=%s", project_id, job_id, iih, fields)
+
+	return retrieveLinesStream(conn, method)
+}
+
 
 // Returns a channel of strings which each element is a JSON serialized job for
 // the project `project_id`. `count` and filters (a list of string of the type
