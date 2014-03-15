@@ -68,17 +68,17 @@ func equality_list_to_map(data []string) map[string]string {
 }
 
 type PFlagsCSV struct {
-    IncludeHeaders bool
-    Fields string
+	IncludeHeaders bool
+	Fields         string
 }
 
 type PFlags struct {
-	Count     int
-	Offset    int
-	Output    string
+	Count       int
+	Offset      int
+	Output      string
 	AsJsonLines bool
-    AsCSV bool
-    CSVFlags PFlagsCSV
+	AsCSV       bool
+	CSVFlags    PFlagsCSV
 }
 
 /** Commands **/
@@ -315,8 +315,8 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			fmt.Println(line)
 		}
 	} else if flags.AsCSV {
-        ch_lines, err := scrapinghub.ItemsAsCSV(conn, job_id, flags.CSVFlags.IncludeHeaders,
-            flags.CSVFlags.Fields)
+		ch_lines, err := scrapinghub.ItemsAsCSV(conn, job_id, count, offset,
+			flags.CSVFlags.IncludeHeaders, flags.CSVFlags.Fields)
 		if err != nil {
 			fmt.Printf("items error: %s\n", err)
 			os.Exit(1)
@@ -325,7 +325,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			fmt.Println(line)
 		}
 
-    } else {
+	} else {
 		items, err := scrapinghub.RetrieveItems(conn, job_id, count, offset)
 		if err != nil {
 			fmt.Printf("items error: %s\n", err)
@@ -497,10 +497,9 @@ func main() {
 	output := flag.String("o", "", "Write output to a file instead of Stdout")
 	fjl := flag.Bool("jl", false, "If given, for command items and jobs will retrieve all the data writing to os.Stdout as JsonLines format")
 
-
-    fcsv := flag.Bool("csv", false, "If given, for command items, they will retrieve as CSV writing to os.Stdout")
-    fincheads := flag.Bool("include_headers", false, "When -csv given, include the headers of the CSV in the output")
-    fcsv_fields := flag.String("fields", "", "When -csv given, list of comma separated fields to include in the CSV")
+	fcsv := flag.Bool("csv", false, "If given, for command items, they will retrieve as CSV writing to os.Stdout")
+	fincheads := flag.Bool("include_headers", false, "When -csv given, include the headers of the CSV in the output")
+	fcsv_fields := flag.String("fields", "", "When -csv given, list of comma separated fields to include in the CSV")
 
 	flag.Parse()
 
@@ -510,9 +509,9 @@ func main() {
 	gflags.Output = *output
 
 	gflags.AsJsonLines = *fjl
-    gflags.AsCSV = *fcsv
-    gflags.CSVFlags.IncludeHeaders = *fincheads
-    gflags.CSVFlags.Fields = *fcsv_fields
+	gflags.AsCSV = *fcsv
+	gflags.CSVFlags.IncludeHeaders = *fincheads
+	gflags.CSVFlags.Fields = *fcsv_fields
 
 	commands := map[string]CmdFun{
 		"spiders":        cmd_spiders,
