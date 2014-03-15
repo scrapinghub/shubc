@@ -501,6 +501,8 @@ func main() {
 	fincheads := flag.Bool("include_headers", false, "When -csv given, include the headers of the CSV in the output")
 	fcsv_fields := flag.String("fields", "", "When -csv given, list of comma separated fields to include in the CSV")
 
+	flag.Usage = cmd_help
+
 	flag.Parse()
 
 	// Set flags
