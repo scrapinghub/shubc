@@ -12,8 +12,10 @@ _Requirements_
 
 _Steps_
 
-    $ go get github.com/scrapinghub/shubc
+    $ go get [-u] github.com/scrapinghub/shubc
     $ go install github.com/scrapinghub/shubc
+
+__Note__: Use option -u to update the package and re-install.
 
 shubc: a command line tool
 --------------------------
