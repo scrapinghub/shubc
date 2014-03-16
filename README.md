@@ -17,6 +17,13 @@ _Steps_
 
 __Note__: Use option -u to update the package and re-install.
 
+scrapinghub.go: the library
+---------------------------
+
+Documentation for the library is online at godoc.org:
+
+- [scrapinghub.go documentation](https://godoc.org/github.com/scrapinghub/shubc/scrapinghub)
+
 shubc: a command line tool
 --------------------------
 
