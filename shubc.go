@@ -148,15 +148,16 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	filters := equality_list_to_map(args[1:])
 
 	count := flags.Count
+	offset := flags.Offset
 
 	if flags.AsJsonLines {
-		ch_jobs, err := scrapinghub.JobsAsJsonLines(conn, project_id, count, filters)
-		if err != nil {
-			fmt.Printf("jobs error: %s\n", err)
-			os.Exit(1)
-		}
+		ch_jobs, errch := scrapinghub.JobsAsJsonLines(conn, project_id, count, offset, filters)
 		for line := range ch_jobs {
 			fmt.Println(line)
+		}
+		for err := range errch {
+			fmt.Printf("jobs error: %s\n", err)
+			os.Exit(1)
 		}
 	} else {
 		var jobs scrapinghub.Jobs
@@ -306,25 +307,24 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	offset := flags.Offset
 
 	if flags.AsJsonLines {
-		ch_lines, err := scrapinghub.ItemsAsJsonLines(conn, job_id, count, offset)
-		if err != nil {
-			fmt.Printf("items error: %s\n", err)
-			os.Exit(1)
-		}
+		ch_lines, errch := scrapinghub.ItemsAsJsonLines(conn, job_id, count, offset)
 		for line := range ch_lines {
 			fmt.Println(line)
+		}
+		for err := range errch {
+			fmt.Printf("items error: %s\n", err)
+			os.Exit(1)
 		}
 	} else if flags.AsCSV {
-		ch_lines, err := scrapinghub.ItemsAsCSV(conn, job_id, count, offset,
+		ch_lines, errch := scrapinghub.ItemsAsCSV(conn, job_id, count, offset,
 			flags.CSVFlags.IncludeHeaders, flags.CSVFlags.Fields)
-		if err != nil {
-			fmt.Printf("items error: %s\n", err)
-			os.Exit(1)
-		}
 		for line := range ch_lines {
 			fmt.Println(line)
 		}
-
+		for err := range errch {
+			fmt.Printf("items error: %s\n", err)
+			os.Exit(1)
+		}
 	} else {
 		items, err := scrapinghub.RetrieveItems(conn, job_id, count, offset)
 		if err != nil {
@@ -492,7 +492,7 @@ func main() {
 	var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
 	var gflags PFlags
 
-	count := flag.Int("count", 100, "Count for those commands that need a count limit")
+	count := flag.Int("count", 0, "Count for those commands that need a count limit")
 	offset := flag.Int("offset", 0, "Number of results to skip from the beginning")
 	output := flag.String("o", "", "Write output to a file instead of Stdout")
 	fjl := flag.Bool("jl", false, "If given, for command items and jobs will retrieve all the data writing to os.Stdout as JsonLines format")
