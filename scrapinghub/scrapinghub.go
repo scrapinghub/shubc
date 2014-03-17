@@ -462,9 +462,10 @@ func retrieveLinesStream(conn *Connection, method string, count, offset int) (<-
 				}
 				offset += retrieved
 				count -= retrieved
+			} else {
+				offset += in_count
+				count -= in_count
 			}
-			offset += in_count
-			count -= in_count
 			if count <= 0 {
 				break
 			}
