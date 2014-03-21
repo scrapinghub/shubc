@@ -258,7 +258,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 		return nil, errors.New("Jobs.JobInfo: Error while retrieving job info")
 	}
 	if len(jobs.Jobs) <= 0 {
-		return nil, errors.New(fmt.Sprintf("Jobs.JobInfo: Job %s does not exist", job_id))
+		return nil, fmt.Errorf("Jobs.JobInfo: Job %s does not exist", job_id)
 	}
 	return &jobs.Jobs[0], nil
 }
@@ -287,7 +287,7 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	json.Unmarshal(content, jobs)
 
 	if jobs.Status != "ok" {
-		return "", errors.New(fmt.Sprintf("Jobs.Schedule: Error while scheduling the job. Message: %s", jobs.Message))
+		return "", fmt.Errorf("Jobs.Schedule: Error while scheduling the job. Message: %s", jobs.Message)
 	}
 	return jobs.JobId, nil
 }
@@ -330,7 +330,7 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	json.Unmarshal(content, jobs)
 
 	if jobs.Status != "ok" {
-		return "", errors.New(fmt.Sprintf("Jobs.Reschedule: Error while scheduling the job. Message: %s", jobs.Message))
+		return "", fmt.Errorf("Jobs.Reschedule: Error while scheduling the job. Message: %s", jobs.Message)
 	}
 	return jobs.JobId, nil
 }
@@ -362,7 +362,7 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	}
 	json.Unmarshal(content, jobs)
 	if jobs.Status != "ok" {
-		return errors.New(fmt.Sprintf("%s. Message: %s", error_string, jobs.Message))
+		return fmt.Errorf("%s. Message: %s", error_string, jobs.Message)
 	}
 	return nil
 }
@@ -632,7 +632,7 @@ func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path stri
 	json.Unmarshal(content, eggs)
 
 	if eggs.Status != "ok" {
-		return nil, errors.New(fmt.Sprintf("Eggs.Add: Error ocurred while uploading egg: %s", eggs.Message))
+		return nil, fmt.Errorf("Eggs.Add: Error ocurred while uploading egg: %s", eggs.Message)
 	}
 	return &eggs.EggData, nil
 }
@@ -656,7 +656,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 	}
 	json.Unmarshal(content, eggs)
 	if eggs.Status != "ok" {
-		return errors.New(fmt.Sprintf("Eggs.Delete: Error ocurred while deleting the egg: ", eggs.Message))
+		return fmt.Errorf("Eggs.Delete: Error ocurred while deleting the egg: ", eggs.Message)
 	}
 	return nil
 }
@@ -679,7 +679,7 @@ func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
 	}
 	json.Unmarshal(content, eggs)
 	if eggs.Status != "ok" {
-		return nil, errors.New(fmt.Sprintf("Eggs.List: Error ocurred while listing the project <%s> eggs: %s", project_id, eggs.Message))
+		return nil, fmt.Errorf("Eggs.List: Error ocurred while listing the project <%s> eggs: %s", project_id, eggs.Message)
 	}
 	return eggs.EggList, nil
 }

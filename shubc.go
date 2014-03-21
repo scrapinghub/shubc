@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/scrapinghub/shubc/scrapinghub"
+	"log"
 	"os"
 	"os/user"
 	"path"
@@ -120,16 +121,14 @@ func cmd_help() {
 
 func cmd_spiders(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <project_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <project_id>\n")
 	}
 	project_id := args[0]
 	var spiders scrapinghub.Spiders
 	spider_list, err := spiders.List(conn, project_id)
 
 	if err != nil {
-		fmt.Printf("spiders error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("spiders error: %s\n", err)
 	} else {
 		fmt.Printf("| %30s | %10s | %20s |\n", "name", "type", "version")
 		fmt.Println(dashes(70))
@@ -141,8 +140,7 @@ func cmd_spiders(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <project_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <project_id>\n")
 	}
 	project_id := args[0]
 	filters := equality_list_to_map(args[1:])
@@ -156,15 +154,13 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			fmt.Println(line)
 		}
 		for err := range errch {
-			fmt.Printf("jobs error: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("jobs error: %s\n", err)
 		}
 	} else {
 		var jobs scrapinghub.Jobs
 		jobs_list, err := jobs.List(conn, project_id, count, filters)
 		if err != nil {
-			fmt.Printf("jobs error: %s", err)
-			os.Exit(1)
+			log.Fatalf("jobs error: %s", err)
 		}
 		outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
 		fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "started_time")
@@ -178,8 +174,7 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_jobinfo(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 	job_id := args[0]
 
@@ -187,8 +182,7 @@ func cmd_jobinfo(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	jobinfo, err := jobs.JobInfo(conn, job_id)
 
 	if err != nil {
-		fmt.Printf("jobinfo error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("jobinfo error: %s\n", err)
 	} else {
 		outfmt := "| %-30s | %60s |\n"
 		fmt.Printf(outfmt, "key", "value")
@@ -223,8 +217,7 @@ func cmd_jobinfo(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_schedule(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 2 {
-		fmt.Printf("Missing arguments: <project_id> and <spider_name>\n")
-		os.Exit(1)
+		log.Fatalf("Missing arguments: <project_id> and <spider_name>\n")
 	}
 	var jobs scrapinghub.Jobs
 	project_id := args[0]
@@ -233,8 +226,7 @@ func cmd_schedule(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	job_id, err := jobs.Schedule(conn, project_id, spider_name, spider_args)
 
 	if err != nil {
-		fmt.Printf("schedule error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("schedule error: %s\n", err)
 	} else {
 		fmt.Printf("Scheduled job: %s\n", job_id)
 	}
@@ -242,15 +234,13 @@ func cmd_schedule(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_jobs_stop(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 	var jobs scrapinghub.Jobs
 	job_id := args[0]
 	err := jobs.Stop(conn, job_id)
 	if err != nil {
-		fmt.Println("stop error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("stop error: %s\n", err)
 	} else {
 		fmt.Printf("Stopped job: %s\n", job_id)
 	}
@@ -258,19 +248,16 @@ func cmd_jobs_stop(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_jobs_update(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 
 	var jobs scrapinghub.Jobs
-
 	job_id := args[0]
 	update_data := equality_list_to_map(args[1:])
 
 	err := jobs.Update(conn, job_id, update_data)
 	if err != nil {
-		fmt.Printf("update error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("update error: %s\n", err)
 	} else {
 		fmt.Printf("Updated job: %s\n", job_id)
 	}
@@ -278,8 +265,7 @@ func cmd_jobs_update(conn *scrapinghub.Connection, args []string, flags *PFlags)
 
 func cmd_jobs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 
 	var jobs scrapinghub.Jobs
@@ -287,18 +273,15 @@ func cmd_jobs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	err := jobs.Delete(conn, job_id)
 
 	if err != nil {
-		fmt.Printf("delete error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("delete error: %s\n", err)
 	} else {
 		fmt.Printf("Deleted job: %s\n", job_id)
 	}
-
 }
 
 func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 
 	job_id := args[0]
@@ -311,8 +294,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			fmt.Println(line)
 		}
 		for err := range errch {
-			fmt.Printf("items error: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("items error: %s\n", err)
 		}
 	} else if flags.AsCSV {
 		ch_lines, errch := scrapinghub.ItemsAsCSV(conn, job_id, count, offset,
@@ -321,14 +303,12 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			fmt.Println(line)
 		}
 		for err := range errch {
-			fmt.Printf("items error: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("items error: %s\n", err)
 		}
 	} else {
 		items, err := scrapinghub.RetrieveItems(conn, job_id, count, offset)
 		if err != nil {
-			fmt.Printf("items error: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("items error: %s\n", err)
 		}
 		for i, e := range items {
 			fmt.Printf("Item %5d %s\n", i, dashes(129))
@@ -342,8 +322,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_as_project_slybot(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <project_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <project_id>\n")
 	}
 
 	project_id := args[0]
@@ -355,8 +334,7 @@ func cmd_as_project_slybot(conn *scrapinghub.Connection, args []string, flags *P
 	if output != "" {
 		out, err = os.Create(output)
 		if err != nil {
-			fmt.Printf("project slybot error: fail to write to file: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("project slybot error: fail to write to file: %s\n", err)
 		}
 	}
 	defer func() {
@@ -366,18 +344,16 @@ func cmd_as_project_slybot(conn *scrapinghub.Connection, args []string, flags *P
 	}()
 	err = scrapinghub.RetrieveSlybotProject(conn, project_id, spiders, out)
 	if err != nil {
-		fmt.Printf("project-slybot error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("project-slybot error: %s\n", err)
 	}
 }
 
 func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
-	job_id := args[0]
 
+	job_id := args[0]
 	count := flags.Count
 	offset := flags.Offset
 
@@ -386,23 +362,20 @@ func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		fmt.Println(line)
 	}
 	for err := range ch_err {
-		fmt.Printf("log error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("log error: %s\n", err)
 	}
 }
 
 func cmd_reschedule(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <job_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <job_id>\n")
 	}
 	job_id := args[0]
 
 	var jobs scrapinghub.Jobs
 	new_job_id, err := jobs.Reschedule(conn, job_id)
 	if err != nil {
-		fmt.Printf("reschedule error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("reschedule error: %s\n", err)
 	} else {
 		fmt.Printf("Re-scheduled job new id: %s\n", new_job_id)
 	}
@@ -410,8 +383,7 @@ func cmd_reschedule(conn *scrapinghub.Connection, args []string, flags *PFlags) 
 
 func cmd_eggs_add(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 2 {
-		fmt.Printf("Missing arguments: <project_id> and <egg_path>\n")
-		os.Exit(1)
+		log.Fatalf("Missing arguments: <project_id> and <egg_path>\n")
 	}
 	project_id := args[0]
 	egg_path := args[1]
@@ -427,39 +399,34 @@ func cmd_eggs_add(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	} else {
 		result := re_egg_pattern.FindStringSubmatch(filepath.Base(egg_path))
 		if len(result) <= 0 {
-			fmt.Println("eggs-add error: Can't guess the name and version from egg path filename, provide it using name=<name> and version=<version> as parameters.")
-			os.Exit(1)
+			log.Fatalf("eggs-add error: Can't guess the name and version from egg path filename, provide it using name=<name> and version=<version> as parameters.\n")
 		}
 		egg_name = result[1]
 		egg_ver = result[2]
 	}
 	if egg_name == "" || egg_ver == "" {
-		fmt.Println("Error: name and version are required")
-		os.Exit(1)
+		log.Fatalf("Error: name and version are required\n")
 	}
 	var eggs scrapinghub.Eggs
 	eggdata, err := eggs.Add(conn, project_id, egg_name, egg_ver, egg_path)
 	if err != nil {
-		fmt.Printf("eggs-add error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("eggs-add error: %s\n", err)
 	}
 	fmt.Printf("Egg uploaded successfully! Project: %s, Egg name: %s, version: %s\n", project_id, eggdata.Name, eggdata.Version)
 }
 
 func cmd_eggs_list(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 1 {
-		fmt.Printf("Missing argument: <project_id>\n")
-		os.Exit(1)
+		log.Fatalf("Missing argument: <project_id>\n")
 	}
+
 	project_id := args[0]
-
 	var eggs scrapinghub.Eggs
-
 	egglist, err := eggs.List(conn, project_id)
 	if err != nil {
-		fmt.Printf("eggs-list error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("eggs-list error: %s\n", err)
 	}
+
 	fmt.Println(dashes(97))
 	outfmt := "| %-30s | %60s |\n"
 	fmt.Printf(outfmt, "Name", "Version")
@@ -472,8 +439,7 @@ func cmd_eggs_list(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if len(args) < 2 {
-		fmt.Printf("Missing arguments: <project_id> and <egg_name>\n")
-		os.Exit(1)
+		log.Fatalf("Missing arguments: <project_id> and <egg_name>\n")
 	}
 	project_id := args[0]
 	egg_name := args[1]
@@ -481,16 +447,21 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	var eggs scrapinghub.Eggs
 	err := eggs.Delete(conn, project_id, egg_name)
 	if err != nil {
-		fmt.Printf("eggs-delete error: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("eggs-delete error: %s\n", err)
 	}
 	fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 }
 
 func main() {
-	var apikey = flag.String("apikey", find_apikey(), "Scrapinghub api key")
-	var gflags PFlags
+	// Set loggin prefix & flags
+	log.SetPrefix("shubc: ")
+	log.SetFlags(0)
 
+	var gflags PFlags
+	var defaultApiUrl = "https://dash.scrapinghub.com/api"
+
+	apikey := flag.String("apikey", find_apikey(), "Scrapinghub api key")
+	apiurl := flag.String("apiurl", defaultApiUrl, "Scrapinghub API URL (can be changed to another uri for testing).")
 	count := flag.Int("count", 0, "Count for those commands that need a count limit")
 	offset := flag.Int("offset", 0, "Number of results to skip from the beginning")
 	output := flag.String("o", "", "Write output to a file instead of Stdout")
@@ -532,11 +503,12 @@ func main() {
 	}
 
 	if len(flag.Args()) <= 0 {
-		fmt.Printf("Usage: shubc [options] url\n")
+		fmt.Fprintf(os.Stderr, "Usage: shubc [options] url\n")
 	} else {
 		// Create new connection
 		var conn scrapinghub.Connection
 		conn.New(*apikey)
+		conn.SetAPIUrl(*apiurl)
 
 		cmd := flag.Arg(0)
 		args := flag.Args()[1:]
@@ -550,8 +522,7 @@ func main() {
 				}
 				cmd_func(&conn, args, &gflags)
 			} else {
-				fmt.Printf("'%s' command not found\n", cmd)
-				os.Exit(1)
+				log.Fatalf("'%s' command not found\n", cmd)
 			}
 		}
 	}
