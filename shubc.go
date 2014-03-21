@@ -162,7 +162,6 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	} else {
 		var jobs scrapinghub.Jobs
 		jobs_list, err := jobs.List(conn, project_id, count, filters)
-
 		if err != nil {
 			fmt.Printf("jobs error: %s", err)
 			os.Exit(1)
@@ -382,13 +381,13 @@ func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	count := flags.Count
 	offset := flags.Offset
 
-	ch_lines, err := scrapinghub.LogLines(conn, job_id, count, offset)
-	if err != nil {
-		fmt.Printf("log error: %s\n", err)
-		os.Exit(1)
-	}
+	ch_lines, ch_err := scrapinghub.LogLines(conn, job_id, count, offset)
 	for line := range ch_lines {
 		fmt.Println(line)
+	}
+	for err := range ch_err {
+		fmt.Printf("log error: %s\n", err)
+		os.Exit(1)
 	}
 }
 
