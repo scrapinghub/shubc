@@ -481,6 +481,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 		defer close(errch)
 
 		in_count := BATCH_SIZE
+		var resp *http.Response
 
 		for {
 			if count < BATCH_SIZE {
@@ -494,20 +495,24 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 			if err != nil {
 				close(out)
 				errch <- err
+				return
 			}
-			resp, err := conn.Get(query_url)
-			if err != nil {
-				i := 0
-				for (err != nil || resp.StatusCode >= 400) && i < MAX_RETRIES {
-					time.Sleep(RETRY_INTERVAL)
-					resp, err = conn.Get(query_url)
-					i++
+
+			i := 0
+			for {
+				resp, err = conn.Get(query_url)
+				if err == nil && resp != nil && resp.StatusCode < 400 {
+					break
 				}
-				if i == MAX_RETRIES && err != nil {
+				time.Sleep(RETRY_INTERVAL)
+				i++
+				if i == MAX_RETRIES {
 					close(out)
-					errch <- err
+					errch <- fmt.Errorf("Max retries reached: %d, internal error message : %v\n", MAX_RETRIES, err)
+					return
 				}
 			}
+
 			scanner := bufio.NewScanner(resp.Body)
 			retrieved := 0
 			for scanner.Scan() {
@@ -518,6 +523,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 				if retrieved == 0 && count > 0 {
 					close(out)
 					errch <- scanner.Err()
+					return
 				}
 				offset += retrieved
 				count -= retrieved
