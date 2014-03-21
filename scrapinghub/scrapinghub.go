@@ -50,9 +50,12 @@ func (conn *Connection) SetAPIUrl(url string) {
 	conn.BaseUrl = url
 }
 
-// Do a GET HTTP request and returns a reponse type `http.Reponse` and `error`
-func (conn *Connection) Get(rurl string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", rurl, nil)
+func (conn *Connection) httpRequest(rurl string, http_method string, params *url.Values) (*http.Response, error) {
+	var buf io.Reader = nil
+	if http_method == "POST" {
+		buf = bytes.NewBufferString(params.Encode())
+	}
+	req, err := http.NewRequest(http_method, rurl, buf)
 	if err != nil {
 		return nil, err
 	}
@@ -60,32 +63,24 @@ func (conn *Connection) Get(rurl string) (*http.Response, error) {
 	req.SetBasicAuth(conn.apikey, "")
 	req.Header.Add("User-Agent", conn.user_agent)
 	return conn.client.Do(req)
+
+}
+
+// Do a GET HTTP request and returns a reponse type `http.Reponse` and `error`
+func (conn *Connection) Get(rurl string) (*http.Response, error) {
+	return conn.httpRequest(rurl, "GET", nil)
 }
 
 // Do a POST HTTP request and returns a reponse type `http.Reponse` and `error`
 // Argument `params` is a map with the POST parameters
-func (conn *Connection) Post(rurl string, params map[string][]string) (*http.Response, error) {
-	data := url.Values{}
-	for k, vals := range params {
-		for _, v := range vals {
-			data.Add(k, v)
-		}
-	}
-	req, err := http.NewRequest("POST", rurl, bytes.NewBufferString(data.Encode()))
-
-	if err != nil {
-		return nil, err
-	}
-	// Set Scrapinghub api key to request
-	req.SetBasicAuth(conn.apikey, "")
-	req.Header.Add("User-Agent", conn.user_agent)
-	return conn.client.Do(req)
+func (conn *Connection) Post(rurl string, params *url.Values) (*http.Response, error) {
+	return conn.httpRequest(rurl, "POST", params)
 }
 
 // Do a POST HTTP request and returns a reponse type `http.Reponse` and `error`
 // Argument `params` is a map with the POST parameters, and files is a map with
 // <filename, filepath> to be posted
-func (conn *Connection) PostFiles(rurl string, params map[string][]string, files map[string]string) (*http.Response, error) {
+func (conn *Connection) PostFiles(rurl string, params *url.Values, files map[string]string) (*http.Response, error) {
 	body := &bytes.Buffer{}
 
 	writer := multipart.NewWriter(body)
@@ -101,7 +96,7 @@ func (conn *Connection) PostFiles(rurl string, params map[string][]string, files
 		}
 		_, err = io.Copy(part, file)
 	}
-	for key, vals := range params {
+	for key, vals := range *params {
 		for _, val := range vals {
 			_ = writer.WriteField(key, val)
 		}
@@ -124,15 +119,17 @@ func (conn *Connection) PostFiles(rurl string, params map[string][]string, files
 // Build the full API URL using the connection.BaseUrl, the `method` to query and
 // all the parameters `params`.
 // Returns the full url processed and an error if exist
-func build_api_url(conn *Connection, method string, params *url.Values) (string, error) {
+func buildApiUrl(conn *Connection, method string, params *url.Values) (string, error) {
 	query_url, err := url.Parse(conn.BaseUrl)
 	if err != nil {
 		return "", err
 	}
 	query_url.Path = path.Join(query_url.Path, method)
-	query_url.RawQuery, err = url.QueryUnescape(params.Encode())
-	if err != nil {
-		return "", err
+	if params != nil {
+		query_url.RawQuery, err = url.QueryUnescape(params.Encode())
+		if err != nil {
+			return "", err
+		}
 	}
 	return query_url.String(), nil
 }
@@ -152,7 +149,7 @@ var (
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	params := url.Values{}
 	params.Add("project", project_id)
-	query_url, err := build_api_url(conn, "/spiders/list.json", &params)
+	query_url, err := buildApiUrl(conn, "/spiders/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +208,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 	for fname, fval := range filters {
 		params.Add(fname, fval)
 	}
-	query_url, err := build_api_url(conn, "/jobs/list.json", &params)
+	query_url, err := buildApiUrl(conn, "/jobs/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +240,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	params := url.Values{}
 	params.Add("project", project_id)
 	params.Add("job_id", job_id)
-	query_url, err := build_api_url(conn, "/jobs/list.json", &params)
+	query_url, err := buildApiUrl(conn, "/jobs/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -266,29 +263,20 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	return &jobs.Jobs[0], nil
 }
 
-func project_data_map(project_id string, spider_name string, job_id string, args map[string]string) map[string][]string {
-	data := map[string][]string{
-		"project": []string{project_id},
-	}
-	if spider_name != "" {
-		data["spider"] = []string{spider_name}
-	}
-	if job_id != "" {
-		data["job"] = []string{job_id}
-	}
-	for k, v := range args {
-		if k != "project" && k != "spider" {
-			data[k] = []string{v}
-		}
-	}
-	return data
-}
-
 // Schedule the spider with name `spider_name` and arguments `args` on `project_id`.
 func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name string, args map[string]string) (string, error) {
-	method := "/schedule.json"
-	data := project_data_map(project_id, spider_name, "", args)
-	resp, err := conn.Post(conn.BaseUrl+method, data)
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("spider", spider_name)
+
+	for k, v := range args {
+		params.Set(k, v)
+	}
+	query_url, err := buildApiUrl(conn, "/schedule.json", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := conn.Post(query_url, &params)
 	if err != nil {
 		return "", err
 	}
@@ -316,10 +304,21 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	method := "/schedule.json"
-	data := project_data_map(project_id, job.Spider, "", job.SpiderArgs)
-	data["add_tag"] = job.Tags
-	resp, err := conn.Post(conn.BaseUrl+method, data)
+
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("spider", job.Spider)
+	for k, v := range job.SpiderArgs {
+		params.Set(k, v)
+	}
+	for _, tag := range job.Tags {
+		params.Add("add_tag", tag)
+	}
+	query_url, err := buildApiUrl(conn, "/schedule.json", nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := conn.Post(query_url, &params)
 	if err != nil {
 		return "", err
 	}
@@ -343,8 +342,17 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	}
 	project_id := result[1]
 
-	data := project_data_map(project_id, "", job_id, update_data)
-	resp, err := conn.Post(conn.BaseUrl+method, data)
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("job", job_id)
+	for k, v := range update_data {
+		params.Set(k, v)
+	}
+	query_url, err := buildApiUrl(conn, method, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := conn.Post(query_url, &params)
 	if err != nil {
 		return err
 	}
@@ -393,7 +401,7 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 	if count > 0 {
 		params.Add("count", strconv.Itoa(count))
 	}
-	query_url, err := build_api_url(conn, "/items.json", &params)
+	query_url, err := buildApiUrl(conn, "/items.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -423,11 +431,16 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 // Download the slybot project for the project `project_id` and the spiders given.
 // The method write the zip file to `out` argument.
 func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string, out *os.File) error {
-	method := fmt.Sprintf("/as/project-slybot.zip?project=%s", project_id)
+	params := url.Values{}
+	params.Add("project", project_id)
 	for _, spider := range spiders {
-		method = method + fmt.Sprintf("&spider=%s", spider)
+		params.Set("spider", spider)
 	}
-	resp, err := conn.Get(conn.BaseUrl + method)
+	query_url, err := buildApiUrl(conn, "/as/project-slybot.zip", &params)
+	if err != nil {
+		return err
+	}
+	resp, err := conn.Get(query_url)
 	if err != nil {
 		return err
 	}
@@ -460,13 +473,14 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 		RETRY_INTERVAL = time.Second * 30
 	)
 
-	var in_count int = BATCH_SIZE
 	out := make(chan string)
 	errch := make(chan error)
 
 	go func() {
 		defer close(out)
 		defer close(errch)
+
+		in_count := BATCH_SIZE
 
 		for {
 			if count < BATCH_SIZE {
@@ -476,7 +490,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 			if in_count > 0 {
 				params.Set("count", strconv.Itoa(in_count))
 			}
-			query_url, err := build_api_url(conn, method, params)
+			query_url, err := buildApiUrl(conn, method, params)
 			if err != nil {
 				close(out)
 				errch <- err
@@ -599,13 +613,15 @@ type Eggs struct {
 
 // Add a python egg to the project `project_id` with `name` and `version` given.
 func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path string) (*Egg, error) {
-	params := map[string][]string{
-		"project": []string{project_id},
-		"name":    []string{name},
-		"version": []string{version},
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("name", name)
+	params.Add("version", version)
+	query_url, err := buildApiUrl(conn, "/eggs/add.json", nil)
+	if err != nil {
+		return nil, err
 	}
-	method := "/eggs/add.json"
-	resp, err := conn.PostFiles(conn.BaseUrl+method, params, map[string]string{"egg": egg_path})
+	resp, err := conn.PostFiles(query_url, &params, map[string]string{"egg": egg_path})
 	if err != nil {
 		return nil, err
 	}
@@ -623,12 +639,14 @@ func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path stri
 
 // Delete the egg `egg_name` from project `project_id`
 func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
-	method := "/eggs/delete.json"
-	params := map[string][]string{
-		"project": []string{project_id},
-		"name":    []string{egg_name},
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("name", egg_name)
+	query_url, err := buildApiUrl(conn, "/eggs/delete.json", nil)
+	if err != nil {
+		return err
 	}
-	resp, err := conn.Post(conn.BaseUrl+method, params)
+	resp, err := conn.Post(query_url, &params)
 	if err != nil {
 		return err
 	}
@@ -645,8 +663,13 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 
 // List all the eggs in the project `project_id`
 func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
-	method := fmt.Sprintf("/eggs/list.json?project=%s", project_id)
-	resp, err := conn.Get(conn.BaseUrl + method)
+	params := url.Values{}
+	params.Add("project", project_id)
+	query_url, err := buildApiUrl(conn, "/eggs/list.json", &params)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := conn.Get(query_url)
 	if err != nil {
 		return nil, err
 	}
