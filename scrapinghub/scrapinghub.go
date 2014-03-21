@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -36,9 +37,15 @@ type Connection struct {
 func (conn *Connection) New(apikey string) {
 	// Create TLS config
 	tlsConfig := tls.Config{RootCAs: nil}
+	ConnectionTimeout := time.Duration(60 * time.Second)
+
 	tr := &http.Transport{
 		TLSClientConfig:    &tlsConfig,
 		DisableCompression: true,
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.DialTimeout(network, addr, ConnectionTimeout)
+		},
+		ResponseHeaderTimeout: ConnectionTimeout,
 	}
 	conn.apikey = apikey
 	conn.BaseUrl = "https://dash.scrapinghub.com/api"
@@ -481,6 +488,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 		defer close(errch)
 
 		in_count := BATCH_SIZE
+		scan_retries := 1
 		var resp *http.Response
 
 		for {
@@ -498,7 +506,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 				return
 			}
 
-			i := 0
+			i := 1
 			for {
 				resp, err = conn.Get(query_url)
 				if err == nil && resp != nil && resp.StatusCode < 400 {
@@ -520,10 +528,13 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 				out <- scanner.Text()
 			}
 			if scanner.Err() != nil {
-				if retrieved == 0 && count > 0 {
-					close(out)
-					errch <- scanner.Err()
-					return
+				if retrieved == 0 {
+					scan_retries++
+					if scan_retries == MAX_RETRIES {
+						close(out)
+						errch <- scanner.Err()
+						return
+					}
 				}
 				offset += retrieved
 				count -= retrieved
