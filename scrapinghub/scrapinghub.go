@@ -126,8 +126,8 @@ func (conn *Connection) PostFiles(rurl string, params *url.Values, files map[str
 // Build the full API URL using the connection.BaseUrl, the `method` to query and
 // all the parameters `params`.
 // Returns the full url processed and an error if exist
-func buildApiUrl(conn *Connection, method string, params *url.Values) (string, error) {
-	query_url, err := url.Parse(conn.BaseUrl)
+func buildApiUrl(baseUrl, method string, params *url.Values) (string, error) {
+	query_url, err := url.Parse(baseUrl)
 	if err != nil {
 		return "", err
 	}
@@ -156,7 +156,7 @@ var (
 func (spider *Spiders) List(conn *Connection, project_id string) (*Spiders, error) {
 	params := url.Values{}
 	params.Add("project", project_id)
-	query_url, err := buildApiUrl(conn, "/spiders/list.json", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/spiders/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func (jobs *Jobs) List(conn *Connection, project_id string, count int, filters m
 	for fname, fval := range filters {
 		params.Add(fname, fval)
 	}
-	query_url, err := buildApiUrl(conn, "/jobs/list.json", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/jobs/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +247,7 @@ func (jobs *Jobs) JobInfo(conn *Connection, job_id string) (*Job, error) {
 	params := url.Values{}
 	params.Add("project", project_id)
 	params.Add("job_id", job_id)
-	query_url, err := buildApiUrl(conn, "/jobs/list.json", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/jobs/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -275,11 +275,11 @@ func (jobs *Jobs) Schedule(conn *Connection, project_id string, spider_name stri
 	params := url.Values{}
 	params.Add("project", project_id)
 	params.Add("spider", spider_name)
-
 	for k, v := range args {
 		params.Set(k, v)
 	}
-	query_url, err := buildApiUrl(conn, "/schedule.json", nil)
+
+	query_url, err := buildApiUrl(conn.BaseUrl, "/schedule.json", nil)
 	if err != nil {
 		return "", err
 	}
@@ -321,7 +321,7 @@ func (jobs *Jobs) Reschedule(conn *Connection, job_id string) (string, error) {
 	for _, tag := range job.Tags {
 		params.Add("add_tag", tag)
 	}
-	query_url, err := buildApiUrl(conn, "/schedule.json", nil)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/schedule.json", nil)
 	if err != nil {
 		return "", err
 	}
@@ -355,7 +355,7 @@ func (jobs *Jobs) postAction(conn *Connection, job_id string, method string, err
 	for k, v := range update_data {
 		params.Set(k, v)
 	}
-	query_url, err := buildApiUrl(conn, method, nil)
+	query_url, err := buildApiUrl(conn.BaseUrl, method, nil)
 	if err != nil {
 		return err
 	}
@@ -408,7 +408,7 @@ func RetrieveItems(conn *Connection, job_id string, count, offset int) ([]map[st
 	if count > 0 {
 		params.Add("count", strconv.Itoa(count))
 	}
-	query_url, err := buildApiUrl(conn, "/items.json", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/items.json", &params)
 	if err != nil {
 		return nil, err
 	}
@@ -443,7 +443,7 @@ func RetrieveSlybotProject(conn *Connection, project_id string, spiders []string
 	for _, spider := range spiders {
 		params.Set("spider", spider)
 	}
-	query_url, err := buildApiUrl(conn, "/as/project-slybot.zip", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/as/project-slybot.zip", &params)
 	if err != nil {
 		return err
 	}
@@ -499,7 +499,7 @@ func retrieveLinesStream(conn *Connection, method string, params *url.Values, co
 			if in_count > 0 {
 				params.Set("count", strconv.Itoa(in_count))
 			}
-			query_url, err := buildApiUrl(conn, method, params)
+			query_url, err := buildApiUrl(conn.BaseUrl, method, params)
 			if err != nil {
 				close(out)
 				errch <- err
@@ -634,7 +634,7 @@ func (eggs *Eggs) Add(conn *Connection, project_id, name, version, egg_path stri
 	params.Add("project", project_id)
 	params.Add("name", name)
 	params.Add("version", version)
-	query_url, err := buildApiUrl(conn, "/eggs/add.json", nil)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/eggs/add.json", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -659,7 +659,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 	params := url.Values{}
 	params.Add("project", project_id)
 	params.Add("name", egg_name)
-	query_url, err := buildApiUrl(conn, "/eggs/delete.json", nil)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/eggs/delete.json", nil)
 	if err != nil {
 		return err
 	}
@@ -682,7 +682,7 @@ func (eggs *Eggs) Delete(conn *Connection, project_id, egg_name string) error {
 func (eggs *Eggs) List(conn *Connection, project_id string) ([]Egg, error) {
 	params := url.Values{}
 	params.Add("project", project_id)
-	query_url, err := buildApiUrl(conn, "/eggs/list.json", &params)
+	query_url, err := buildApiUrl(conn.BaseUrl, "/eggs/list.json", &params)
 	if err != nil {
 		return nil, err
 	}
