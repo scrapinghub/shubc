@@ -149,7 +149,8 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	offset := flags.Offset
 
 	if flags.AsJsonLines {
-		ch_jobs, errch := scrapinghub.JobsAsJsonLines(conn, project_id, count, offset, filters)
+		ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
+		ch_jobs, errch := ls.JobsAsJsonLines(project_id, filters)
 		for line := range ch_jobs {
 			fmt.Println(line)
 		}
@@ -287,9 +288,11 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	job_id := args[0]
 	count := flags.Count
 	offset := flags.Offset
+	ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
 
 	if flags.AsJsonLines {
-		ch_lines, errch := scrapinghub.ItemsAsJsonLines(conn, job_id, count, offset)
+		ch_lines, errch := ls.ItemsAsJsonLines(job_id)
+
 		for line := range ch_lines {
 			fmt.Println(line)
 		}
@@ -297,8 +300,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			log.Fatalf("items error: %s\n", err)
 		}
 	} else if flags.AsCSV {
-		ch_lines, errch := scrapinghub.ItemsAsCSV(conn, job_id, count, offset,
-			flags.CSVFlags.IncludeHeaders, flags.CSVFlags.Fields)
+		ch_lines, errch := ls.ItemsAsCSV(job_id, flags.CSVFlags.IncludeHeaders, flags.CSVFlags.Fields)
 		for line := range ch_lines {
 			fmt.Println(line)
 		}
@@ -357,7 +359,9 @@ func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	count := flags.Count
 	offset := flags.Offset
 
-	ch_lines, ch_err := scrapinghub.LogLines(conn, job_id, count, offset)
+	ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
+	ch_lines, ch_err := ls.LogLines(job_id)
+
 	for line := range ch_lines {
 		fmt.Println(line)
 	}
