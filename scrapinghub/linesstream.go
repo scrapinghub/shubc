@@ -1,6 +1,3 @@
-// Implement all the methods that handle long api call queries
-// returning streams of data
-
 package scrapinghub
 
 import (

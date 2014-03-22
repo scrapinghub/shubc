@@ -1,4 +1,3 @@
-// Go bindings for Scrapinghub API (http://doc.scrapinghub.com/api.html)
 package scrapinghub
 
 import (
@@ -16,9 +15,6 @@ import (
 	"path/filepath"
 	"time"
 )
-
-// Scrapinghub Base API URL
-var libversion = "0.1"
 
 type HttpVerb int32
 
@@ -61,12 +57,12 @@ func (conn *Connection) New(apikey string) (err error) {
 		ResponseHeaderTimeout: ConnectionTimeout,
 	}
 	conn.apikey = apikey
-	conn.BaseUrl = "https://dash.scrapinghub.com/api"
+	conn.BaseUrl = APIURL
 	conn.ParsedBaseUrl, err = url.Parse(conn.BaseUrl)
 	if err != nil {
 		return fmt.Errorf("Connection.New: cannot parse base url provided, error message: %s\n", err)
 	}
-	conn.user_agent = fmt.Sprintf("scrapinghub.go/%s (http://github.com/scrapinghub/shubc)", libversion)
+	conn.user_agent = USER_AGENT
 	conn.client = &http.Client{Transport: tr}
 	return nil
 }

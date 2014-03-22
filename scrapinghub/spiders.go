@@ -1,4 +1,3 @@
-// Implment all the methods related to Spider information
 package scrapinghub
 
 import (

@@ -1,4 +1,3 @@
-// Implement all the API methods for items retrieving
 package scrapinghub
 
 import (

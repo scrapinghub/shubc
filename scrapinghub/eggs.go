@@ -1,4 +1,3 @@
-// Implements all the API methods related to Eggs handling
 package scrapinghub
 
 import (

@@ -1,4 +1,3 @@
-// Implement all the api method related to jobs handling
 package scrapinghub
 
 import (
