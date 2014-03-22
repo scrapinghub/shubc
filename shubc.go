@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var re_egg_pattern = regexp.MustCompile(`(.+?)-(\d(?:\.\d)*)-?.*`)
@@ -80,6 +81,7 @@ type PFlags struct {
 	AsJsonLines bool
 	AsCSV       bool
 	CSVFlags    PFlagsCSV
+	Tailing     bool
 }
 
 /** Commands **/
@@ -163,12 +165,12 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		if err != nil {
 			log.Fatalf("jobs error: %s", err)
 		}
-		outfmt := "| %10s | %25s | %12s | %10s | %10s | %20s |\n"
-		fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "started_time")
+		outfmt := "| %10s | %25s | %12s | %10s | %10s | %10s | %20s |\n"
+		fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "log lines", "started_time")
 		fmt.Println(dashes(106))
 		for _, j := range jobs_list.Jobs {
-			fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %20s |\n", j.Id, j.Spider, j.State,
-				j.ItemsScraped, j.ErrorsCount, j.StartedTime)
+			fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %10d | %20s |\n", j.Id, j.Spider, j.State,
+				j.ItemsScraped, j.ErrorsCount, j.Logs, j.StartedTime)
 		}
 	}
 }
@@ -359,14 +361,46 @@ func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	count := flags.Count
 	offset := flags.Offset
 
-	ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
-	ch_lines, ch_err := ls.LogLines(job_id)
+	if flags.Tailing {
+		log_tailing(conn, job_id)
+	} else {
+		ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
+		ch_lines, ch_err := ls.LogLines(job_id)
 
-	for line := range ch_lines {
-		fmt.Println(line)
+		for line := range ch_lines {
+			fmt.Println(line)
+		}
+		for err := range ch_err {
+			log.Fatalf("log error: %s\n", err)
+		}
 	}
-	for err := range ch_err {
-		log.Fatalf("log error: %s\n", err)
+}
+
+func log_tailing(conn *scrapinghub.Connection, job_id string) {
+	var jobs scrapinghub.Jobs
+	jobinfo, err := jobs.JobInfo(conn, job_id)
+	if err != nil {
+		log.Fatalf("%s\n", err)
+	}
+	// Number of log lines in the job
+	offset := jobinfo.Logs
+	if offset > 0 {
+		offset -= 1 // start one line before
+	}
+	count := 10 // ask for this lines in every call
+	ls := scrapinghub.LinesStream{Conn: conn, Count: count, Offset: offset}
+	for {
+		retrieved := 0
+		ch_lines, ch_err := ls.LogLines(job_id)
+		for line := range ch_lines {
+			retrieved++
+			fmt.Fprintf(os.Stdout, "%s\n", line)
+		}
+		for err := range ch_err {
+			log.Fatalf("%s\n", err)
+		}
+		ls.Offset += retrieved
+		time.Sleep(time.Second)
 	}
 }
 
@@ -474,6 +508,7 @@ func main() {
 	fcsv := flag.Bool("csv", false, "If given, for command items, they will retrieve as CSV writing to os.Stdout")
 	fincheads := flag.Bool("include_headers", false, "When -csv given, include the headers of the CSV in the output")
 	fcsv_fields := flag.String("fields", "", "When -csv given, list of comma separated fields to include in the CSV")
+	tail := flag.Bool("tail", false, "The same that `tail -f` for command `log`")
 
 	flag.Usage = cmd_help
 
@@ -488,6 +523,7 @@ func main() {
 	gflags.AsCSV = *fcsv
 	gflags.CSVFlags.IncludeHeaders = *fincheads
 	gflags.CSVFlags.Fields = *fcsv_fields
+	gflags.Tailing = *tail
 
 	commands := map[string]CmdFun{
 		"spiders":        cmd_spiders,

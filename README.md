@@ -44,6 +44,7 @@ Getting help
       -jl=false: If given, for command items and jobs will retrieve all the data writing to os.Stdout as JsonLines format
       -o="": Write output to a file instead of Stdout
       -offset=0: Number of results to skip from the beginning
+      -tail=false: The same that `tail -f` for command `log`
 
      Commands: 
        Spiders API: 
@@ -71,6 +72,7 @@ You can configure your APIKEY using the .scrapy.cfg file in your home. You can g
 * `-jl` : For commands `items` and `jobs`, if given will retrieve all the data writing to os.Stdout as JsonLines format, default=false
 * `-o` : Write output to a file instead of Stdout
 * `-offset`: Number of results to skip from the beginning, default=`0`
+* `-tail` : The same that `tail -f` for command `log`, default=`false`
 
 ### Commands
 
@@ -94,7 +96,7 @@ You can configure your APIKEY using the .scrapy.cfg file in your home. You can g
 
 #### Log API
 
-* `log <job-id>`: print to Stdout the log for job `job-id`
+* `log <job-id>`: print to Stdout the log for job `job-id`. Avail. options: `-tail`
 
 #### Autoscraping API
 
