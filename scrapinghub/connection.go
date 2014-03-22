@@ -64,11 +64,11 @@ func (conn *Connection) New(apikey string) (err error) {
 	}
 	conn.apikey = apikey
 	conn.BaseUrl = APIURL
-    purl, err := url.Parse(conn.BaseUrl)
+	purl, err := url.Parse(conn.BaseUrl)
 	if err != nil {
 		return fmt.Errorf("Connection.New: cannot parse base url provided, error message: %s\n", err)
 	}
-    conn.ParsedBaseUrl = *purl
+	conn.ParsedBaseUrl = *purl
 	conn.user_agent = USER_AGENT
 	conn.client = &http.Client{Transport: tr}
 	return nil
@@ -77,11 +77,11 @@ func (conn *Connection) New(apikey string) (err error) {
 // Set a new API url (e.g: for testing purposes)
 func (conn *Connection) SetAPIUrl(apiurl string) (err error) {
 	conn.BaseUrl = apiurl
-    purl, err := url.Parse(conn.BaseUrl)
+	purl, err := url.Parse(conn.BaseUrl)
 	if err != nil {
 		return fmt.Errorf("Connection.New: cannot parse base url provided, error message: %s\n", err)
 	}
-    conn.ParsedBaseUrl = *purl
+	conn.ParsedBaseUrl = *purl
 	return nil
 }
 
