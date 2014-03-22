@@ -45,7 +45,7 @@ type Connection struct {
 	apikey        string
 	user_agent    string
 	BaseUrl       string
-	ParsedBaseUrl *url.URL
+	ParsedBaseUrl url.URL
 }
 
 // Create a new connection to Scrapinghub API
@@ -64,10 +64,11 @@ func (conn *Connection) New(apikey string) (err error) {
 	}
 	conn.apikey = apikey
 	conn.BaseUrl = APIURL
-	conn.ParsedBaseUrl, err = url.Parse(conn.BaseUrl)
+    purl, err := url.Parse(conn.BaseUrl)
 	if err != nil {
 		return fmt.Errorf("Connection.New: cannot parse base url provided, error message: %s\n", err)
 	}
+    conn.ParsedBaseUrl = *purl
 	conn.user_agent = USER_AGENT
 	conn.client = &http.Client{Transport: tr}
 	return nil
@@ -76,10 +77,11 @@ func (conn *Connection) New(apikey string) (err error) {
 // Set a new API url (e.g: for testing purposes)
 func (conn *Connection) SetAPIUrl(apiurl string) (err error) {
 	conn.BaseUrl = apiurl
-	conn.ParsedBaseUrl, err = url.Parse(conn.BaseUrl)
+    purl, err := url.Parse(conn.BaseUrl)
 	if err != nil {
 		return fmt.Errorf("Connection.New: cannot parse base url provided, error message: %s\n", err)
 	}
+    conn.ParsedBaseUrl = *purl
 	return nil
 }
 
@@ -106,7 +108,6 @@ func (conn *Connection) APICall(method string, http_method HttpVerb, params *url
 	} else {
 		return nil, fmt.Errorf("Connection.APICall: '%s' http method not supported\n", http_method.String())
 	}
-
 	req, err := http.NewRequest(http_method.String(), query_url.String(), buf)
 	if err != nil {
 		return nil, err
