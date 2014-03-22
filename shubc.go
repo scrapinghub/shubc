@@ -507,8 +507,14 @@ func main() {
 	} else {
 		// Create new connection
 		var conn scrapinghub.Connection
-		conn.New(*apikey)
-		conn.SetAPIUrl(*apiurl)
+		err := conn.New(*apikey)
+		if err != nil {
+			log.Fatalf("error creating scrapinghub.Connection: %s", err)
+		}
+		err = conn.SetAPIUrl(*apiurl)
+		if err != nil {
+			log.Fatalf("error setting api url: %s", err)
+		}
 
 		cmd := flag.Arg(0)
 		args := flag.Args()[1:]
