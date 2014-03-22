@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// Represent the Http verbs like GET, POST, PUT, etc
 type HttpVerb int32
 
 const (
@@ -24,6 +25,8 @@ const (
 	POST
 )
 
+// Retruns the string representation of a HttpVerb
+// e.g.: GET -> "GET"
 func (hv HttpVerb) String() string {
 	switch hv {
 	case GET:
@@ -34,6 +37,9 @@ func (hv HttpVerb) String() string {
 	return ""
 }
 
+// The connection holds information about the http client,
+// the user API key, the API url and the parsed form of the
+// API url.
 type Connection struct {
 	client        *http.Client
 	apikey        string
@@ -67,6 +73,7 @@ func (conn *Connection) New(apikey string) (err error) {
 	return nil
 }
 
+// Set a new API url (e.g: for testing purposes)
 func (conn *Connection) SetAPIUrl(apiurl string) (err error) {
 	conn.BaseUrl = apiurl
 	conn.ParsedBaseUrl, err = url.Parse(conn.BaseUrl)

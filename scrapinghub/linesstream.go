@@ -103,7 +103,7 @@ func (ls *LinesStream) withJobID(method string, params *url.Values, job_id strin
 		params.Set("project", ProjectID(job_id))
 		return ls.asLinesStream(method, params)
 	} else {
-		return make(chan string), FromErrToErrChan(err)
+		return make(chan string), fromErrToErrChan(err)
 	}
 }
 
@@ -114,7 +114,7 @@ func (ls *LinesStream) withProjectID(method string, params *url.Values, project_
 		params.Set("project", project_id)
 		return ls.asLinesStream(method, params)
 	} else {
-		return make(chan string), FromErrToErrChan(err)
+		return make(chan string), fromErrToErrChan(err)
 	}
 }
 

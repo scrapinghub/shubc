@@ -8,6 +8,8 @@ import (
 	"strconv"
 )
 
+// Represent a Scrapinghub Job with all the fields returned
+// by the API
 type Job struct {
 	CloseReason       string `json:"close_reason"`
 	Elapsed           int
@@ -27,6 +29,8 @@ type Job struct {
 	Version           string
 }
 
+// Jobs is a collection of jobs, in some cases it may contain
+// just a single JobId (when scheduling for example)
 type Jobs struct {
 	Status  string
 	Count   int

@@ -13,7 +13,7 @@ var (
 )
 
 // Given an error return a channel with the error on it
-func FromErrToErrChan(err error) <-chan error {
+func fromErrToErrChan(err error) <-chan error {
 	errch := make(chan error)
 	go func() {
 		defer close(errch)

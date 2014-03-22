@@ -6,10 +6,16 @@ import (
 	"net/url"
 )
 
+// Represent a Python Egg with Name and Version
 type Egg struct {
 	Name    string
 	Version string
 }
+
+// Represent an API response for the Eggs API
+// Besides the typical fields of Status and Message, may contain
+// information about all the eggs in the project, or just one egg
+// in EggData
 type Eggs struct {
 	Status  string
 	Message string
