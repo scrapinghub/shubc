@@ -25,7 +25,7 @@ func fromErrToErrChan(err error) <-chan error {
 // Validate an Scrapinghub job id
 // Returns an error in case is wrong, nil otherwise
 func ValidateJobID(job_id string) error {
-	if re_jobid.MatchString(job_id) {
+	if !re_jobid.MatchString(job_id) {
 		return wrong_job_id_error
 	}
 	return nil
@@ -35,7 +35,7 @@ func ValidateJobID(job_id string) error {
 // Validate an Scrapinghub project id
 // Returns an error in case is wrong, nil otherwise
 func ValidateProjectID(project_id string) error {
-	if re_projectid.MatchString(project_id) {
+	if !re_projectid.MatchString(project_id) {
 		return wrong_project_id_error
 	}
 	return nil
