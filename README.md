@@ -34,19 +34,45 @@ Getting help
     % shubc help
     shubc [options] <command> arg1 .. argN
 
+     Options: 
+      -apikey="<API KEY>": Scrapinghub api key
+      -apiurl="https://dash.scrapinghub.com/api": Scrapinghub API URL (can be changed to another uri for testing).
+      -count=0: Count for those commands that need a count limit
+      -csv=false: If given, for command items, they will retrieve as CSV writing to os.Stdout
+      -fields="": When -csv given, list of comma separated fields to include in the CSV
+      -include_headers=false: When -csv given, include the headers of the CSV in the output
+      -jl=false: If given, for command items and jobs will retrieve all the data writing to os.Stdout as JsonLines format
+      -o="": Write output to a file instead of Stdout
+      -offset=0: Number of results to skip from the beginning
+
      Commands: 
-       spiders <project_id>                       - list the spiders on project_id
-       jobs <project_id> [filters]                - list the last 100 jobs on project_id
-       jobinfo <job_id>                           - print information about the job with <job_id>
-       schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>
-       stop <job_id>                              - stop the job with <job_id>
-       ...
+       Spiders API: 
+         spiders <project_id>                       - list the spiders on project_id
+       Jobs API: 
+         schedule <project_id> <spider_name> [args] - schedule the spider <spider_name> with [args] in project <project_id>
+         reschedule <job_id>                        - re-schedule the job `job_id` with the same arguments and tags
+         jobs <project_id> [filters]                - list the last 100 jobs on project_id
+         jobinfo <job_id>                           - print information about the job with <job_id>
+    ...
+    ...
 
 ### Configure your APIKEY
 
 You can configure your APIKEY using the .scrapy.cfg file in your home. You can get more information on how to configure it here: http://doc.scrapinghub.com/scrapy-cloud.html#deploying-your-scrapy-spider
 
-### Available Commands
+### Options
+
+* `-apikey` : Scrapinghub api key
+* `-apiurl` : Scrapinghub API URL, by default is "https://dash.scrapinghub.com/api" but can be changed to another uri for testing.
+* `-count`  : Count for those commands that need a count limit, default=`0` 
+* `-csv` : For command `items`, if given, it will retrieve the data as CSV writing to os.Stdout, default=`false`
+* `-fields` : For command `items` and when `-csv` option is given, is the list of fields to include in the CSV (e.g: -fields=name,address,etc.)
+* `-include_headers` : For command `items` and when `-csv` is given, include the headers of the CSV in the output, default=`false`
+* `-jl` : For commands `items` and `jobs`, if given will retrieve all the data writing to os.Stdout as JsonLines format, default=false
+* `-o` : Write output to a file instead of Stdout
+* `-offset`: Number of results to skip from the beginning, default=`0`
+
+### Commands
 
 #### Spiders API
 
@@ -56,15 +82,15 @@ You can configure your APIKEY using the .scrapy.cfg file in your home. You can g
 
 * `schedule <project-id> <spider-name> [args]`: schedule the spider `spider-name` with `args` in project `project-id`
 * `reschedule <job_id>`: re-schedule the job `job_id` with the same arguments and tags
-* `jobs <project-id> [filters]`: list the last 100 jobs on `project-id` (accept `-count` parameter). Filters are in the form: `state=running`, `spider=spider1`, etc. If `-raw` option is given output the jobs as JsonLines to Stdout.
-* `jobinfo <job-id>`: print information about the job with `job-id`;
+* `jobs <project-id> [filters]`: list the last 100 jobs on `project-id` (accept `-count` parameter). Filters are in the form: `state=running`, `spider=spider1`, etc. Avail. options: `-jl`, `-csv`
+* `jobinfo <job-id>`: print information about the job with `job-id`
 * `update <job-id> [args]`: update the job with `job_id` using the `args` given
 * `stop <job-id>`: stop the job with `job-id`
 * `delete <job-id>`: delete the job with `job- id`
 
 #### Items API
 
-* `items <job-id>`: print to stdout the items for `job-id` (`count` & `offset` available). If `-raw` option is given output the jobs as JsonLines to Stdout.
+* `items <job-id>`: print to stdout the items for `job-id` (`count` & `offset` available). Avail. options: `-jl`, `-csv`
 
 #### Log API
 
