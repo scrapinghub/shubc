@@ -99,11 +99,11 @@ func (ls *LinesStream) asLinesStream(method string, params *url.Values) (<-chan 
 // Scrapinghub job_id.
 func (ls *LinesStream) withJobID(method string, params *url.Values, job_id string) (<-chan string, <-chan error) {
 	if err := ValidateJobID(job_id); err != nil {
+		return emptyStringChan(), fromErrToErrChan(err)
+	} else {
 		params.Set("job", job_id)
 		params.Set("project", ProjectID(job_id))
 		return ls.asLinesStream(method, params)
-	} else {
-		return make(chan string), fromErrToErrChan(err)
 	}
 }
 
@@ -111,10 +111,10 @@ func (ls *LinesStream) withJobID(method string, params *url.Values, job_id strin
 // Scrapinghub project_id.
 func (ls *LinesStream) withProjectID(method string, params *url.Values, project_id string) (<-chan string, <-chan error) {
 	if err := ValidateProjectID(project_id); err != nil {
+		return emptyStringChan(), fromErrToErrChan(err)
+	} else {
 		params.Set("project", project_id)
 		return ls.asLinesStream(method, params)
-	} else {
-		return make(chan string), fromErrToErrChan(err)
 	}
 }
 

@@ -17,9 +17,19 @@ func fromErrToErrChan(err error) <-chan error {
 	errch := make(chan error)
 	go func() {
 		defer close(errch)
-		errch <- err
+		if err != nil {
+			errch <- err
+		}
 	}()
 	return errch
+}
+
+func emptyStringChan() <-chan string {
+	outch := make(chan string)
+	go func() {
+		close(outch)
+	}()
+	return outch
 }
 
 // Validate an Scrapinghub job id
