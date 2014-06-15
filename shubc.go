@@ -26,6 +26,28 @@ func dashes(n int) string {
 	return s
 }
 
+func print_out(flags *PFlags, format string, args ...interface{}) {
+    output := flags.Output
+    line := fmt.Sprintf(format, args...)
+    var out *os.File = os.Stdout
+    var err error
+    if output == "" {
+        fmt.Println(line)
+        return
+    }
+    out ,err = os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+    if err != nil {
+        log.Fatalf("Error writing output to file: %s\n", err)
+    } else {
+        fmt.Fprintln(out, line)
+    }
+    defer func() {
+        if err := out.Close(); err != nil {
+            panic(err)
+        }
+    }()
+}
+
 func find_apikey() string {
 	if os.Getenv("SH_APIKEY") != "" {
 		return os.Getenv("SH_APIKEY")
@@ -132,10 +154,10 @@ func cmd_spiders(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if err != nil {
 		log.Fatalf("spiders error: %s\n", err)
 	} else {
-		fmt.Printf("| %30s | %10s | %20s |\n", "name", "type", "version")
-		fmt.Println(dashes(70))
+		print_out(flags, "| %30s | %10s | %20s |\n", "name", "type", "version")
+		print_out(flags, dashes(70))
 		for _, spider := range spider_list.Spiders {
-			fmt.Printf("| %30s | %10s | %20s |\n", spider["id"], spider["type"], spider["version"])
+			print_out(flags, "| %30s | %10s | %20s |\n", spider["id"], spider["type"], spider["version"])
 		}
 	}
 }
@@ -166,10 +188,10 @@ func cmd_jobs(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			log.Fatalf("jobs error: %s", err)
 		}
 		outfmt := "| %10s | %25s | %12s | %10s | %10s | %10s | %20s |\n"
-		fmt.Printf(outfmt, "id", "spider", "state", "items", "errors", "log lines", "started_time")
-		fmt.Println(dashes(106))
+		print_out(flags, outfmt, "id", "spider", "state", "items", "errors", "log lines", "started_time")
+		print_out(flags, dashes(106))
 		for _, j := range jobs_list.Jobs {
-			fmt.Printf("| %10s | %25s | %12s | %10d | %10d | %10d | %20s |\n", j.Id, j.Spider, j.State,
+			print_out(flags, "| %10s | %25s | %12s | %10d | %10d | %10d | %20s |\n", j.Id, j.Spider, j.State,
 				j.ItemsScraped, j.ErrorsCount, j.Logs, j.StartedTime)
 		}
 	}
@@ -188,33 +210,33 @@ func cmd_jobinfo(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		log.Fatalf("jobinfo error: %s\n", err)
 	} else {
 		outfmt := "| %-30s | %60s |\n"
-		fmt.Printf(outfmt, "key", "value")
-		fmt.Println(dashes(97))
-		fmt.Printf(outfmt, "id", jobinfo.Id)
-		fmt.Printf(outfmt, "spider", jobinfo.Spider)
-		fmt.Printf(outfmt, "spider_args", "")
+		print_out(flags, outfmt, "key", "value")
+		print_out(flags, dashes(97))
+		print_out(flags, outfmt, "id", jobinfo.Id)
+		print_out(flags, outfmt, "spider", jobinfo.Spider)
+		print_out(flags, outfmt, "spider_args", "")
 		for k, v := range jobinfo.SpiderArgs {
-			fmt.Printf(outfmt, " ", fmt.Sprintf("%s = %s", k, v))
+			print_out(flags, outfmt, " ", fmt.Sprintf("%s = %s", k, v))
 		}
-		fmt.Printf(outfmt, "spider_type", jobinfo.SpiderType)
-		fmt.Printf(outfmt, "state", jobinfo.State)
-		fmt.Printf(outfmt, "close_reason", jobinfo.CloseReason)
-		fmt.Println(dashes(97))
-		fmt.Printf(outfmt, "responses_received", fmt.Sprintf("%d", jobinfo.ResponsesReceived))
-		fmt.Printf(outfmt, "items_scraped", fmt.Sprintf("%d", jobinfo.ItemsScraped))
-		fmt.Printf(outfmt, "errors_count", fmt.Sprintf("%d", jobinfo.ErrorsCount))
-		fmt.Printf(outfmt, "logs", fmt.Sprintf("%d", jobinfo.Logs))
-		fmt.Println(dashes(97))
-		fmt.Printf(outfmt, "started_time", jobinfo.StartedTime)
-		fmt.Printf(outfmt, "updated_time", jobinfo.UpdatedTime)
-		fmt.Printf(outfmt, "elapsed", fmt.Sprintf("%d", jobinfo.Elapsed))
-		fmt.Printf(outfmt, "tags", " ")
+		print_out(flags, outfmt, "spider_type", jobinfo.SpiderType)
+		print_out(flags, outfmt, "state", jobinfo.State)
+		print_out(flags, outfmt, "close_reason", jobinfo.CloseReason)
+		print_out(flags, dashes(97))
+		print_out(flags, outfmt, "responses_received", fmt.Sprintf("%d", jobinfo.ResponsesReceived))
+		print_out(flags, outfmt, "items_scraped", fmt.Sprintf("%d", jobinfo.ItemsScraped))
+		print_out(flags, outfmt, "errors_count", fmt.Sprintf("%d", jobinfo.ErrorsCount))
+		print_out(flags, outfmt, "logs", fmt.Sprintf("%d", jobinfo.Logs))
+		print_out(flags, dashes(97))
+		print_out(flags, outfmt, "started_time", jobinfo.StartedTime)
+		print_out(flags, outfmt, "updated_time", jobinfo.UpdatedTime)
+		print_out(flags, outfmt, "elapsed", fmt.Sprintf("%d", jobinfo.Elapsed))
+		print_out(flags, outfmt, "tags", " ")
 		for _, e := range jobinfo.Tags {
-			fmt.Printf(outfmt, " ", e)
+			print_out(flags, outfmt, " ", e)
 		}
-		fmt.Printf(outfmt, "priority", fmt.Sprintf("%d", jobinfo.Priority))
-		fmt.Printf(outfmt, "version", jobinfo.Version)
-		fmt.Println(dashes(97))
+		print_out(flags, outfmt, "priority", fmt.Sprintf("%d", jobinfo.Priority))
+		print_out(flags, outfmt, "version", jobinfo.Version)
+		print_out(flags, dashes(97))
 	}
 }
 
@@ -296,7 +318,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		ch_lines, errch := ls.ItemsAsJsonLines(job_id)
 
 		for line := range ch_lines {
-			fmt.Println(line)
+			print_out(flags, line)
 		}
 		for err := range errch {
 			log.Fatalf("items error: %s\n", err)
@@ -304,7 +326,7 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	} else if flags.AsCSV {
 		ch_lines, errch := ls.ItemsAsCSV(job_id, flags.CSVFlags.IncludeHeaders, flags.CSVFlags.Fields)
 		for line := range ch_lines {
-			fmt.Println(line)
+			print_out(flags, line)
 		}
 		for err := range errch {
 			log.Fatalf("items error: %s\n", err)
@@ -315,11 +337,12 @@ func cmd_items(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 			log.Fatalf("items error: %s\n", err)
 		}
 		for i, e := range items {
-			fmt.Printf("Item %5d %s\n", i, dashes(129))
+			print_out(flags, "Item %5d %s\n", i, dashes(129))
 			for k, v := range e {
-				fmt.Printf("| %-33s | %100s |\n", k, fmt.Sprintf("%v", v))
+				//fmt.Printf("| %-33s | %100s |\n", k, fmt.Sprintf("%v", v))
+				print_out(flags, "| %-33s | %100s |\n", k, fmt.Sprintf("%v", v))
 			}
-			fmt.Println(dashes(140))
+			print_out(flags, dashes(140))
 		}
 	}
 }
@@ -368,7 +391,7 @@ func cmd_log(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		ch_lines, ch_err := ls.LogLines(job_id)
 
 		for line := range ch_lines {
-			fmt.Println(line)
+			print_out(flags, line)
 		}
 		for err := range ch_err {
 			log.Fatalf("log error: %s\n", err)
