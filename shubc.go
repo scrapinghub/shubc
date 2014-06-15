@@ -27,25 +27,25 @@ func dashes(n int) string {
 }
 
 func print_out(flags *PFlags, format string, args ...interface{}) {
-    output := flags.Output
-    line := fmt.Sprintf(format, args...)
-    var out *os.File = os.Stdout
-    var err error
-    if output == "" {
-        fmt.Println(line)
-        return
-    }
-    out ,err = os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
-    if err != nil {
-        log.Fatalf("Error writing output to file: %s\n", err)
-    } else {
-        fmt.Fprintln(out, line)
-    }
-    defer func() {
-        if err := out.Close(); err != nil {
-            panic(err)
-        }
-    }()
+	output := flags.Output
+	line := fmt.Sprintf(format, args...)
+	var out *os.File = os.Stdout
+	var err error
+	if output == "" {
+		fmt.Println(line)
+		return
+	}
+	out, err = os.OpenFile(output, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatalf("Error writing output to file: %s\n", err)
+	} else {
+		fmt.Fprintln(out, line)
+	}
+	defer func() {
+		if err := out.Close(); err != nil {
+			panic(err)
+		}
+	}()
 }
 
 func find_apikey() string {
