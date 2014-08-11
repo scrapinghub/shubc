@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/scrapinghub/shubc/scrapinghub"
+    // "github.com/scrapinghub/shubc/scrapinghub"
+    //FIXME: return to the above one ^^^
+    "shubc/scrapinghub"
 	"log"
 	"os"
 	"os/user"
@@ -104,6 +106,7 @@ type PFlags struct {
 	AsCSV       bool
 	CSVFlags    PFlagsCSV
 	Tailing     bool
+	Debug       bool
 }
 
 /** Commands **/
@@ -141,6 +144,11 @@ func cmd_help() {
 
 	fmt.Println("   Autoscraping API: ")
 	fmt.Println("     project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
+
+	fmt.Println("   Deploy API: ")
+	fmt.Println("     deploy <target> [egg] [project_id] [version]  - deploy `target` to Scrapinghub")
+	fmt.Println("     deploy-list-targets                           - list available targets to deploy")
+	fmt.Println("     build-egg                                     - build egg but not deploy")
 }
 
 func cmd_spiders(conn *scrapinghub.Connection, args []string, flags *PFlags) {
@@ -513,6 +521,25 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 }
 
+//TODO: implement
+func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+}
+
+//TODO: implement
+func cmd_deploy_list_targets(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+	if !scrapinghub.Inside_scrapy_project() {
+		log.Fatal("Error: no Scrapy project found in this location")
+	}
+
+	for name, _ := range scrapinghub.Scrapy_cfg_targets() {
+		fmt.Println(name)
+	}
+}
+
+//TODO: implement
+func cmd_deploy_build_egg(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+}
+
 func main() {
 	// Set loggin prefix & flags
 	log.SetPrefix("shubc: ")
@@ -532,6 +559,7 @@ func main() {
 	fincheads := flag.Bool("include_headers", false, "When -csv given, include the headers of the CSV in the output")
 	fcsv_fields := flag.String("fields", "", "When -csv given, list of comma separated fields to include in the CSV")
 	tail := flag.Bool("tail", false, "The same that `tail -f` for command `log`")
+	debug := flag.Bool("debug", false, "debug mode for some commands (deploy: not remove debug dir)")
 
 	flag.Usage = cmd_help
 
@@ -547,22 +575,26 @@ func main() {
 	gflags.CSVFlags.IncludeHeaders = *fincheads
 	gflags.CSVFlags.Fields = *fcsv_fields
 	gflags.Tailing = *tail
+	gflags.Debug = *debug
 
 	commands := map[string]CmdFun{
-		"spiders":        cmd_spiders,
-		"jobs":           cmd_jobs,
-		"jobinfo":        cmd_jobinfo,
-		"schedule":       cmd_schedule,
-		"stop":           cmd_jobs_stop,
-		"update":         cmd_jobs_update,
-		"delete":         cmd_jobs_delete,
-		"items":          cmd_items,
-		"project-slybot": cmd_as_project_slybot,
-		"log":            cmd_log,
-		"reschedule":     cmd_reschedule,
-		"eggs-add":       cmd_eggs_add,
-		"eggs-list":      cmd_eggs_list,
-		"eggs-delete":    cmd_eggs_delete,
+		"spiders":             cmd_spiders,
+		"jobs":                cmd_jobs,
+		"jobinfo":             cmd_jobinfo,
+		"schedule":            cmd_schedule,
+		"stop":                cmd_jobs_stop,
+		"update":              cmd_jobs_update,
+		"delete":              cmd_jobs_delete,
+		"items":               cmd_items,
+		"project-slybot":      cmd_as_project_slybot,
+		"log":                 cmd_log,
+		"reschedule":          cmd_reschedule,
+		"eggs-add":            cmd_eggs_add,
+		"eggs-list":           cmd_eggs_list,
+		"eggs-delete":         cmd_eggs_delete,
+		"deploy":              cmd_deploy,
+		"deploy-list-targets": cmd_deploy_list_targets,
+		"build-egg":           cmd_deploy_build_egg,
 	}
 
 	if len(flag.Args()) <= 0 {
