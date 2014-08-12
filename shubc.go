@@ -3,15 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-    // "github.com/scrapinghub/shubc/scrapinghub"
-    //FIXME: return to the above one ^^^
-    "shubc/scrapinghub"
+	// "github.com/scrapinghub/shubc/scrapinghub"
+	//FIXME: return to the above one ^^^
 	"log"
 	"os"
 	"os/user"
 	"path"
 	"path/filepath"
 	"regexp"
+	"shubc/scrapinghub"
 	"strings"
 	"time"
 )
@@ -525,12 +525,10 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 }
 
-//TODO: implement
 func cmd_deploy_list_targets(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if !scrapinghub.Inside_scrapy_project() {
 		log.Fatal("Error: no Scrapy project found in this location")
 	}
-
 	for name, _ := range scrapinghub.Scrapy_cfg_targets() {
 		fmt.Println(name)
 	}
@@ -538,6 +536,12 @@ func cmd_deploy_list_targets(conn *scrapinghub.Connection, args []string, flags 
 
 //TODO: implement
 func cmd_deploy_build_egg(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+	egg, tmpdir, err := scrapinghub.BuildEgg()
+	if err != nil {
+		log.Fatalf("Error buildig the egg: %s\n", err)
+	}
+	fmt.Printf(" => Stdout/Stderr: %s\n", tmpdir)
+	fmt.Printf("Egg successfully build: %s\n", egg)
 }
 
 func main() {

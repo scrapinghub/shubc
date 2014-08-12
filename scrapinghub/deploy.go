@@ -6,7 +6,9 @@
 package scrapinghub
 
 import (
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -19,6 +21,18 @@ import (
 const SCRAPY_ENVAR = "SCRAPY_SETTINGS_MODULE"
 const PY_CHECK_IMP = "import os, importlib; importlib.import_module(os.environ.get('%s'))"
 const SCRAPINGHUB_DEPLOY_URL = "http://dash.scrapinghub.com/api/scrapyd/"
+
+const SETUP_PY_TEMPLATE = `# Automatically created by: shub deploy
+
+from setuptools import setup, find_packages
+
+setup(
+    name         = 'project',
+    version      = '1.0',
+    packages     = find_packages(),
+    entry_points = {'scrapy': ['settings = %s']},
+)
+`
 
 // Return the path to the closest scrapy.cfg file by traversing the current
 // directory and its parents
@@ -115,6 +129,46 @@ func Scrapy_cfg_targets() ini.File {
 		}
 	}
 	return targets
+}
+
+func createDefaultSetupPy(settings string) {
+	str := fmt.Sprintf(SETUP_PY_TEMPLATE, settings)
+	ioutil.WriteFile("setup.py", []byte(str), os.ModeAppend)
+}
+
+func BuildEgg() (string, string, error) {
+	closest_cfg := closest_scrapy_cfg(".", "")
+	err := os.Chdir(filepath.Dir(closest_cfg))
+	if err != nil {
+		return "", "", err
+	}
+	// if not exists 'setup.py'
+	if _, err := os.Stat("setup.py"); err != nil {
+		settings, ok := scrapy_get_config()["settings"]
+		if !ok {
+			return "", "", errors.New("BuildEgg: No 'settings' section found on scrapy.cfg")
+		}
+		createDefaultSetupPy(settings["default"])
+	}
+	tmpdir, err := ioutil.TempDir(os.TempDir(), "shubc-deploy")
+	if err != nil {
+		return "", "", errors.New("BuildEgg: Can't create temporary directory")
+	}
+	cmd := exec.Command("python", "setup.py", "clean", "-a", "bdist_egg", "-d", tmpdir)
+	tout, _ := os.Create(filepath.Join(tmpdir, "stdout"))
+	terr, _ := os.Create(filepath.Join(tmpdir, "stderr"))
+	cmd.Stdout = tout
+	cmd.Stderr = terr
+	if err := cmd.Run(); err != nil {
+		return "", "", errors.New(fmt.Sprintf("BuildEgg: Can't create egg file - details: %s", err))
+	}
+	matches, err := filepath.Glob(filepath.Join(tmpdir, "*.egg"))
+	if err != nil {
+		return "", "", errors.New(fmt.Sprintf("BuildEgg: No '.egg' file foun on %d", tmpdir))
+	}
+	tout.Close()
+	terr.Close()
+	return matches[0], tmpdir, nil
 }
 
 //TODO: implement
