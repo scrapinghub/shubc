@@ -131,11 +131,21 @@ func Scrapy_cfg_targets() ini.File {
 	return targets
 }
 
+func Scrapy_cfg_target(name string) (ini.Section, error) {
+	target, ok := Scrapy_cfg_targets()[name]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("Unknown target: %s", name))
+	}
+	return target, nil
+}
+
 func createDefaultSetupPy(settings string) {
 	str := fmt.Sprintf(SETUP_PY_TEMPLATE, settings)
 	ioutil.WriteFile("setup.py", []byte(str), os.ModeAppend)
 }
 
+// Build an egg and returns:
+//  => egg file path, tmpdir with egg creation data, error in case exists
 func BuildEgg() (string, string, error) {
 	closest_cfg := closest_scrapy_cfg(".", "")
 	err := os.Chdir(filepath.Dir(closest_cfg))
@@ -160,11 +170,11 @@ func BuildEgg() (string, string, error) {
 	cmd.Stdout = tout
 	cmd.Stderr = terr
 	if err := cmd.Run(); err != nil {
-		return "", "", errors.New(fmt.Sprintf("BuildEgg: Can't create egg file - details: %s", err))
+		return "", tmpdir, errors.New(fmt.Sprintf("BuildEgg: Can't create egg file - details: %s", err))
 	}
 	matches, err := filepath.Glob(filepath.Join(tmpdir, "*.egg"))
 	if err != nil {
-		return "", "", errors.New(fmt.Sprintf("BuildEgg: No '.egg' file foun on %d", tmpdir))
+		return "", tmpdir, errors.New(fmt.Sprintf("BuildEgg: No '.egg' file foun on %d", tmpdir))
 	}
 	tout.Close()
 	terr.Close()

@@ -527,21 +527,37 @@ func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 
 func cmd_deploy_list_targets(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	if !scrapinghub.Inside_scrapy_project() {
-		log.Fatal("Error: no Scrapy project found in this location")
+		log.Fatal("list-targets: no Scrapy project found in this location")
 	}
 	for name, _ := range scrapinghub.Scrapy_cfg_targets() {
 		fmt.Println(name)
 	}
 }
 
-//TODO: implement
 func cmd_deploy_build_egg(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+	wdir, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("build-egg: problem getting current working dir")
+	}
 	egg, tmpdir, err := scrapinghub.BuildEgg()
 	if err != nil {
-		log.Fatalf("Error buildig the egg: %s\n", err)
+		log.Fatalf("build-egg: error building the egg: %s\n", err)
 	}
-	fmt.Printf(" => Stdout/Stderr: %s\n", tmpdir)
-	fmt.Printf("Egg successfully build: %s\n", egg)
+
+	finalegg := filepath.Join(wdir, filepath.Base(egg))
+	if err := scrapinghub.CopyFile(egg, finalegg); err != nil {
+		log.Fatalf("build-egg: can't copy the egg from %s to %s. Error: \n", egg, finalegg, err)
+	}
+
+	fmt.Printf("Egg successfully build: %s\n", finalegg)
+
+	if !flags.Debug {
+		if err := os.RemoveAll(tmpdir); err != nil {
+			log.Fatalf("build-egg: can't remove tmpdir: %s", tmpdir)
+		}
+	} else {
+		fmt.Printf("Debug logs and build directory: %s\n", tmpdir)
+	}
 }
 
 func main() {
