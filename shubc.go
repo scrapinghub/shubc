@@ -146,7 +146,7 @@ func cmd_help() {
 	fmt.Println("     project-slybot <project_id> [spiders]      - download the zip and write it to Stdout or o.zip if -o option is given")
 
 	fmt.Println("   Deploy API: ")
-	fmt.Println("     deploy <target> [egg] [project_id] [version]  - deploy `target` to Scrapinghub")
+	fmt.Println("     deploy <target> [project_id=<project_id>] [egg=<egg>] [version=<version>]  - deploy `target` to Scrapinghub")
 	fmt.Println("     deploy-list-targets                           - list available targets to deploy")
 	fmt.Println("     build-egg                                     - build egg but not deploy")
 }
@@ -521,8 +521,23 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 }
 
+func _get_argument(args []string, n int) string {
+	if len(args) > n+1 {
+		return args[n]
+	}
+	return ""
+}
+
 //TODO: implement
 func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
+	target := _get_argument(args, 0)
+	project_id := _get_argument(args, 1)
+	egg := _get_argument(args, 2)
+	version := _get_argument(args, 3)
+
+	if err := scrapinghub.Deploy(conn, target, project_id, version, egg); err != nil {
+		log.Fatalf("deploy: error ocurred when deploying: %s", err)
+	}
 }
 
 func cmd_deploy_list_targets(conn *scrapinghub.Connection, args []string, flags *PFlags) {

@@ -14,6 +14,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/vaughan0/go-ini"
 )
@@ -144,6 +145,45 @@ func createDefaultSetupPy(settings string) {
 	ioutil.WriteFile("setup.py", []byte(str), os.ModeAppend)
 }
 
+var err_scrapy_cfg_ver error = errors.New("scray_cfg_version: can't get version")
+
+func Scrapy_cfg_version(versys string) (string, error) {
+	if versys == "HG" {
+		out, err := exec.Command("hg", "tip", "--template", "{rev}").Output()
+		if err != nil {
+			return "", err_scrapy_cfg_ver
+		}
+		rev := fmt.Sprintf("r%s", out)
+		out, err = exec.Command("hg", "branch").Output()
+		if err != nil {
+			return "", err_scrapy_cfg_ver
+		}
+		branch := strings.Trim(string(out), "\n")
+		return fmt.Sprintf("%s-%s", rev, branch), nil
+	} else if versys == "GIT" {
+		out, err := exec.Command("git", "describe").Output()
+		rev := strings.Trim(string(out), "\n")
+		if err != nil {
+			out, err := exec.Command("git", "rev-list", "--count", "HEAD").Output()
+			if err != nil {
+				return "", err_scrapy_cfg_ver
+			}
+			rev = fmt.Sprintf("r%s", strings.Trim(string(out), "\n"))
+		}
+		out, err = exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+		if err != nil {
+			return "", err_scrapy_cfg_ver
+		}
+		branch := strings.Trim(string(out), "\n")
+		return fmt.Sprintf("%s-%s", rev, branch), nil
+
+	} else if versys != "" {
+		return versys, nil
+	} else {
+		return fmt.Sprintf(".2f", float64(time.Now().UnixNano())/1000000000.0), nil
+	}
+}
+
 // Build an egg and returns:
 //  => egg file path, tmpdir with egg creation data, error in case exists
 func BuildEgg() (string, string, error) {
@@ -182,6 +222,27 @@ func BuildEgg() (string, string, error) {
 }
 
 //TODO: implement
-func Deploy(target, project, version string, egg string) bool {
-	return false
+func Deploy(conn *Connection, target_name, project_id, version, egg string) error {
+	fmt.Println("Starting deploy ...")
+	if target_name == "" {
+		target_name = "default"
+	}
+	target, err := Scrapy_cfg_target(target_name)
+	if err != nil {
+		return err
+	}
+	fmt.Printf(" => target name: %s\n", target_name)
+	if project_id == "" {
+		project_id = target["project"]
+	}
+	fmt.Printf(" => project id : %s\n", project_id)
+	if version == "" {
+		version = target["version"]
+	}
+	rver, err := Scrapy_cfg_version(version)
+	if err != nil {
+		return err
+	}
+	fmt.Printf(" => version    : %s\n", rver)
+	return nil
 }
