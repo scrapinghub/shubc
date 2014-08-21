@@ -9,12 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"encoding/json"
 
 	"github.com/vaughan0/go-ini"
 )
@@ -221,28 +224,34 @@ func BuildEgg() (string, string, error) {
 	return matches[0], tmpdir, nil
 }
 
-//TODO: implement
-func Deploy(conn *Connection, target_name, project_id, version, egg string) error {
-	fmt.Println("Starting deploy ...")
-	if target_name == "" {
-		target_name = "default"
+// Deploy functions
+
+type DeployMessage struct {
+	Status  string
+	Message string
+	Project string
+	Version string
+	Spiders int
+}
+
+// Add a python egg to the project `project_id` with `name` and `version` given.
+func (d *DeployMessage) UploadEgg(conn *Connection, target ini.Section, project_id, version, egg string) (*DeployMessage, error) {
+	params := url.Values{}
+	params.Add("project", project_id)
+	params.Add("version", version)
+
+	url, ok := target["url"]
+	if ok && url != "" {
+		conn.SetAPIUrl(url)
 	}
-	target, err := Scrapy_cfg_target(target_name)
+	content, err := conn.APIPostFilesReadBody("/addversion.json", &params, map[string]string{"egg": egg})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Printf(" => target name: %s\n", target_name)
-	if project_id == "" {
-		project_id = target["project"]
+
+	json.Unmarshal(content, d)
+	if d.Status != "ok" {
+		return nil, fmt.Errorf("Deploy.UploadEgg: Error ocurred while uploading egg: %s", d.Message)
 	}
-	fmt.Printf(" => project id : %s\n", project_id)
-	if version == "" {
-		version = target["version"]
-	}
-	rver, err := Scrapy_cfg_version(version)
-	if err != nil {
-		return err
-	}
-	fmt.Printf(" => version    : %s\n", rver)
-	return nil
+	return d, nil
 }

@@ -523,10 +523,10 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 
 //TODO: implement
 func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
-	var target, project_id, egg, version string
+	var target_name, project_id, egg, version string
 	if len(args) > 0 {
 		if strings.Index(args[0], "=") < 0 {
-			target = args[0]
+			target_name = args[0]
 		}
 		oargs := equality_list_to_map(args)
 
@@ -535,8 +535,62 @@ func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 		version = oargs["version"]
 	}
 
-	if err := scrapinghub.Deploy(conn, target, project_id, version, egg); err != nil {
-		log.Fatalf("deploy: error ocurred when deploying: %s", err)
+	fmt.Println("Starting deploy ...")
+
+	if target_name == "" {
+		target_name = "default"
+	}
+
+	target, err := scrapinghub.Scrapy_cfg_target(target_name)
+	if err != nil {
+		log.Fatalf("deploy: error parsing scrapy.cfg, error desc: %s\n", err)
+	}
+	if project_id == "" {
+		project_id = target["project"]
+	}
+	if version == "" {
+		version = target["version"]
+	}
+	rver, err := scrapinghub.Scrapy_cfg_version(version)
+	if err != nil {
+		log.Fatalf("deploy: error parsing discovering version, error desc: %s\n", err)
+	}
+
+	fmt.Printf(" => target name: %s\n", target_name)
+	fmt.Printf(" => project id : %s\n", project_id)
+	fmt.Printf(" => version    : %s\n", rver)
+	fmt.Println()
+
+	var tmpdir string = ""
+
+	if egg != "" {
+		fmt.Printf("Using egg: %s\n", egg)
+	} else {
+		fmt.Println("Building egg ...")
+		egg, tmpdir, err = scrapinghub.BuildEgg()
+		if err != nil {
+			log.Fatalf("deploy: error building egg, error desc: %s\n", err)
+		}
+	}
+
+	var deploy scrapinghub.DeployMessage
+	fmt.Println("Deploying to Scrapy Cloud ...")
+
+	_, err = deploy.UploadEgg(conn, target, project_id, rver, egg)
+	if err != nil {
+		log.Fatalf("deploy: error uploading egg, error desc: %s\n", err)
+	}
+
+	fmt.Println("\nSuccesfully deployed!")
+
+	if tmpdir != "" {
+		if !flags.Debug {
+			if err := os.RemoveAll(tmpdir); err != nil {
+				log.Fatalf("build-egg: can't remove tmpdir: %s", tmpdir)
+			}
+		} else {
+			fmt.Printf(" => Debug: logs and build directory: %s\n", tmpdir)
+		}
 	}
 }
 
