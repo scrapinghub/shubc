@@ -521,19 +521,19 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 }
 
-func _get_argument(args []string, n int) string {
-	if len(args) > n+1 {
-		return args[n]
-	}
-	return ""
-}
-
 //TODO: implement
 func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
-	target := _get_argument(args, 0)
-	project_id := _get_argument(args, 1)
-	egg := _get_argument(args, 2)
-	version := _get_argument(args, 3)
+	var target, project_id, egg, version string
+	if len(args) > 0 {
+		if strings.Index(args[0], "=") < 0 {
+			target = args[0]
+		}
+		oargs := equality_list_to_map(args)
+
+		project_id = oargs["project_id"]
+		egg = oargs["egg"]
+		version = oargs["version"]
+	}
 
 	if err := scrapinghub.Deploy(conn, target, project_id, version, egg); err != nil {
 		log.Fatalf("deploy: error ocurred when deploying: %s", err)
