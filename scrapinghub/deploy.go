@@ -24,7 +24,7 @@ import (
 
 const SCRAPY_ENVAR = "SCRAPY_SETTINGS_MODULE"
 const PY_CHECK_IMP = "import os, importlib; importlib.import_module(os.environ.get('%s'))"
-const SCRAPINGHUB_DEPLOY_URL = "http://dash.scrapinghub.com/api/scrapyd/"
+const SCRAPINGHUB_DEPLOY_URL = "https://dash.scrapinghub.com/api/scrapyd/"
 
 const SETUP_PY_TEMPLATE = `# Automatically created by: shub deploy
 
