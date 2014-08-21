@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"shubc/scrapinghub"
 	"strings"
 	"time"
 )
