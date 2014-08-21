@@ -109,3 +109,9 @@ You can configure your APIKEY using the .scrapy.cfg file in your home. You can g
 * `eggs-add <project_id> <path> [name=n version=v]`: add the egg in `path` to the project `project_id`. By default it guess the name and version from `path`, but can be given using name=eggname and version=XXX
 * `eggs-list <project_id>`: list the eggs in `project_id`
 * `eggs-delete <project_id> <egg_name>`: delete the egg `egg_name` in the project `project_id`
+
+#### Deploy
+
+* `deploy <target> [project_id=<project_id>] [egg=<egg>] [version=<version>]`: deploy `target` to Scrapy Cloud
+* `deploy-list-targets`: list available targets to deploy
+* `build-egg`: just build the egg file
