@@ -3,8 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	// "github.com/scrapinghub/shubc/scrapinghub"
-	//FIXME: return to the above one ^^^
+	"github.com/scrapinghub/shubc/scrapinghub"
 	"log"
 	"os"
 	"os/user"
