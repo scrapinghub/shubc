@@ -521,7 +521,6 @@ func cmd_eggs_delete(conn *scrapinghub.Connection, args []string, flags *PFlags)
 	fmt.Printf("Egg %s successfully deleted from project: %s\n", egg_name, project_id)
 }
 
-//TODO: implement
 func cmd_deploy(conn *scrapinghub.Connection, args []string, flags *PFlags) {
 	var target_name, project_id, egg, version string
 	if len(args) > 0 {

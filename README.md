@@ -9,11 +9,13 @@ Installation
 _Requirements_
 
 * Golang >= 1.1 
+* go-ini : https://github.com/vaughan0/go-ini
 
 _Steps_
 
-    $ go get [-u] github.com/scrapinghub/shubc
-    $ go install github.com/scrapinghub/shubc
+    $ go get [-u] github.com/vaughan0/go-ini   # install go-ini dep
+    $ go get [-u] github.com/scrapinghub/shubc # install or update shubc library
+    $ go install github.com/scrapinghub/shubc  # install the tool
 
 __Note__: Use option -u to update the package and re-install.
 
