@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var re_egg_pattern = regexp.MustCompile(`(.+?)-(\d(?:\.\d)*)-?.*`)
+var re_egg_pattern = regexp.MustCompile(`(.+?)-(\d+(?:\.\d)*)-?.*`)
 
 type CmdFun func(conn *scrapinghub.Connection, args []string, flags *PFlags)
 
